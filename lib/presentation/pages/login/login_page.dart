@@ -1,0 +1,243 @@
+import 'package:flutter/material.dart';
+
+//Esta clase HEREDA de StatefulWidget (puede cambiar)
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+  //Es como decir: Voy a crear un tipo de widget nuevo
+  //llamado LoginPage que puede cambiar con el tiempo
+
+  // dato generico, este metodo  retorna tipo LoginPage la cual se llamara
+  //createState y  este va a crear un  _LoginPageState osea se crea una instancia
+  // La clase privada (el _ significa privada) que contiene la lógica
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+//extends State<LoginPage>` → Maneja el estado de LoginPage
+class _LoginPageState extends State<LoginPage> {
+  // _obscurePassword` = nombre de la variable (privada por el `_`)
+  // `bool` = tipo de dato (booleano: true o false)
+  bool _obscurePassword =
+      true; // Variable para ocultar/mostrar contraseña,comienza siendo verdadero
+
+  @override
+  // build Método que construye la interfaz de usuario
+  // BuildContext context  Información sobre dónde está este widget en el árbol
+  Widget build(BuildContext context) {
+    //Devuelve un Scaffold (estructura base de pantalla)
+    return Scaffold(
+      body: Container(
+        // Contenedor principal,Una caja que contiene otros widgets
+        width: double.infinity, //Ancho = 100% de la pantalla
+        height: double.infinity, //Alto = 100% de la pantalla
+        //decoration: Esta es una propiedad de un widget como Container o DecoratedBox
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFF5B9EF5),
+              Color(0xFF4A8FE7),
+            ], //Define los colores inicial y final del degradado
+            begin: Alignment
+                .topCenter, // Punto de inicio del degradado (centro superior)
+            end: Alignment
+                .bottomCenter, // Punto final del degradado (centro inferior)
+          ),
+        ),
+        child: SafeArea(
+          //SafeArea evita que el contenido se dibuje debajo de la barra de estado(hora, batería, etc.) y el notch la muesca en algunos dispositivos
+          child: SingleChildScrollView(
+            //Permite desplazamiento si el contenido es más grande que la pantalla
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+            // permite hacer scroll si el  contenido es más grande que la pantalla y padding es el espacio interno y lo otro es el espacio vertical y horizontal
+            child: Column(
+              //Organiza los widgets en una columna (de arriba hacia abajo)
+              crossAxisAlignment: CrossAxisAlignment
+                  .center, // centra horizontalmente todos los hijos de la columna
+              children: [
+                // Logo
+                Image.asset('assets/images/logo.png', height: 150), //
+                const SizedBox(height: 30), //Espacio vertical de 30 píxeles
+                // Título
+                const Text(
+                  'Inicio de Sessión',
+                  style: TextStyle(
+                    fontSize: 28, //Tamaño de la fuente
+                    fontWeight: FontWeight.bold, //Negrita
+                    color: Colors.white, //Color blanco
+                  ),
+                ),
+
+                const SizedBox(height: 40), //Espacio vertical de 40 píxeles
+                // Campo Correo electrónico
+                Container(
+                  width:
+                      MediaQuery.of(context).size.width *
+                      0.4, // Ancho = 100% del ancho de la pantalla
+                  // Contenedor para el campo de texto
+                  decoration: BoxDecoration(
+                    //Decoración del contenedor
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(
+                      30,
+                    ), // Bordes redondeados con radio de 30
+                  ),
+                  child: const TextField(
+                    decoration: InputDecoration(
+                      //Decoración del campo de texto
+                      border: InputBorder.none, // Sin borde
+                      hintText: 'Correo electronico',
+                      contentPadding: EdgeInsets.symmetric(
+                        // Espaciado interno
+                        horizontal: 25, // Espacio horizontal de 25 píxeles
+                        vertical: 18, // Espacio vertical de 18 píxeles
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Campo Contraseña
+                Container(
+                  width:
+                      MediaQuery.of(context).size.width *
+                      0.4, // Ancho = 100% del ancho de la pantalla
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: TextField(
+                    obscureText:
+                        _obscurePassword, // Oculta el texto si _obscurePassword es true
+                    decoration: InputDecoration(
+                      //Decoración del campo de texto
+                      border: InputBorder.none, // Sin borde
+                      hintText: 'Contraseña', // Texto de sugerencia
+                      contentPadding: const EdgeInsets.symmetric(
+                        // Espaciado interno
+                        horizontal: 25,
+                        vertical: 18,
+                      ),
+                      suffixIcon: IconButton(
+                        // Icono al final del campo de texto
+                        icon: Icon(
+                          // Icono que cambia según el estado de
+                          _obscurePassword
+                              ? Icons
+                                    .visibility_off //👁️‍🗨️ (cerrado)
+                              : Icons
+                                    .visibility, // Cambia el icono según el estado 👁️ (abierto)
+                          color: Colors.grey, // Color gris para el icono
+                        ),
+                        onPressed: () {
+                          //Cuando se presiona el botón se ejecuta esta función
+                          setState(() {
+                            //  Le dice a Flutter: "¡Actualiza la pantalla!"
+                            _obscurePassword =
+                                !_obscurePassword; // Cambia el valor de _obscurePassword (true a false o viceversa)
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 40), //Espacio vertical de 40 píxeles
+                // Botón Iniciar sesión
+                SizedBox(
+                  // Contenedor para el botón inicio sesion
+                  width:
+                      MediaQuery.of(context).size.width *
+                      0.4, // Ancho = 40% del ancho de la pantalla
+                  child: ElevatedButton(
+                    onPressed: () {
+                      // Acción al tocar el botón (vacío por ahora)
+                      print('Iniciando xd sesión...');
+                      Navigator.pushReplacementNamed(context, '/home');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      // Estilo del botón
+                      backgroundColor: const Color(0xFF0D47A1),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 16,
+                      ), // Espaciado interno vertical de 16 píxeles
+                      shape: RoundedRectangleBorder(
+                        // Forma del botón
+                        borderRadius: BorderRadius.circular(
+                          30,
+                        ), // Bordes redondeados con radio de 30
+                      ),
+                    ),
+
+                    child: const Text(
+                      // Texto del botón
+                      'Iniciar  sesion',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20), //Espacio vertical de 20 píxeles
+                // Texto "¿No tienes cuenta? Regístrate aquí"
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      '¿No tienes cuenta? ',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pushNamed(context, '/register');
+                      },
+                      child: const Text(
+                        'Regístrate aquí',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 30),
+
+                // Botón Google
+                Container(
+                  width:
+                      MediaQuery.of(context).size.width *
+                      0.4, // Ancho = 40% del ancho de la pantalla
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(Icons.login, color: Colors.red),
+                      SizedBox(width: 10),
+                      Text(
+                        'Inicio de sessión con Google',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
