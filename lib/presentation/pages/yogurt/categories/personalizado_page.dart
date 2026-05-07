@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../widgets/custom_bottom_nav_bar.dart';
+import 'package:yogo_vital_app/presentation/widgets/custom_bottom_nav_bar.dart';
 
 /// Pantalla para personalizar un yogurt (Mockup)
 class PersonalizadoPage extends StatefulWidget {
@@ -60,7 +60,11 @@ class _PersonalizadoPageState extends State<PersonalizadoPage> {
                   Image.asset('assets/images/logo.png', height: 36),
                   IconButton(
                     icon: const Icon(Icons.search, color: Colors.white),
-                    onPressed: () => print('Buscar'),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Busqueda proximamente')),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -294,10 +298,11 @@ class _PersonalizadoPageState extends State<PersonalizadoPage> {
                           ),
                           ElevatedButton(
                             onPressed: () {
-                              // Aquí podrías crear el pedido o navegar a otra pantalla
-                              print(
-                                'Crear: size=$_selectedSize base=$_selectedBase fruit=$_selectedFruit extras=$_extrasChispas sugar=$_sugarLevel sweetener=$_sweetener',
-                              );
+                              final resumen =
+                                  'Pedido creado: $_selectedSize, base $_selectedBase';
+                              ScaffoldMessenger.of(
+                                context,
+                              ).showSnackBar(SnackBar(content: Text(resumen)));
                             },
                             child: const Text('Crear'),
                           ),

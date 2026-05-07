@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:yogo_vital_app/core/network/api_client.dart';
 
 class AuthRemoteDataSource {
@@ -14,8 +13,9 @@ class AuthRemoteDataSource {
     String? passwordConfirmation,
   }) async {
     final body = {'name': name, 'email': email, 'password': password};
-    if (passwordConfirmation != null)
+    if (passwordConfirmation != null) {
       body['password_confirmation'] = passwordConfirmation;
+    }
     return apiClient.post('/auth/register', body);
   }
 
@@ -33,6 +33,24 @@ class AuthRemoteDataSource {
     required String email,
   }) async {
     return apiClient.post('/auth/resend_verification', {'email': email});
+  }
+
+  Future<Map<String, dynamic>> requestPasswordReset({
+    required String email,
+  }) async {
+    return apiClient.post('/auth/password_reset', {'email': email});
+  }
+
+  Future<Map<String, dynamic>> confirmPasswordReset({
+    required String token,
+    required String password,
+    String? passwordConfirmation,
+  }) async {
+    final body = {'token': token, 'password': password};
+    if (passwordConfirmation != null) {
+      body['password_confirmation'] = passwordConfirmation;
+    }
+    return apiClient.post('/auth/password_reset/confirm', body);
   }
 
   Future<Map<String, dynamic>> verify({required String token}) async {

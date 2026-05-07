@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../widgets/custom_bottom_nav_bar.dart';
+import 'package:yogo_vital_app/presentation/widgets/custom_bottom_nav_bar.dart';
 import 'dart:async';
 
 class HomePage extends StatefulWidget {
@@ -18,7 +18,7 @@ class _HomePageState extends State<HomePage> {
   final List<String> _bannerImages = [
     'assets/images/Coco.png', // Crea estas imágenes o usa placeholders
     'assets/images/Chontaduro.png',
-    'assets/images/imgChontaduro.jng',
+    'assets/images/ImgChontaduro.png',
   ];
 
   @override
@@ -52,33 +52,102 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF0F2F4),
       body: SafeArea(
         child: Column(
           children: [
             // HEADER CON LOGO Y BÚSQUEDA
             _buildHeader(),
 
-            // CONTENIDO CON SCROLL
+            // CONTENIDO NARANJA (como en mockup)
             Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // CARRUSEL DE BANNERS
-                    _buildCarousel(),
+              child: Container(
+                color: const Color(0xFFF2A654), // fondo naranja principal
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Mantener el carrusel dentro de un card blanco para contraste
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.06),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: SizedBox(
+                              height: 200,
+                              child: _buildCarousel(),
+                            ),
+                          ),
+                        ),
+                      ),
 
-                    const SizedBox(height: 20),
+                      const SizedBox(height: 18),
 
-                    // SECCIÓN "SABORES NUEVOS"
-                    _buildNewFlavorsSection(),
-                  ],
+                      // SECCIÓN "SABORES NUEVOS" con padding dentro del área naranja
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Sabores Nuevos',
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF6B3A0D),
+                              ),
+                            ),
+
+                            const SizedBox(height: 18),
+
+                            // Lista de productos (tarjetas blancas)
+                            _buildProductCard(
+                              'Yogurt de Chontaduro\nsabor a miel.',
+                              'Disfruta de esta combinación única de sabores tropicales.',
+                              'assets/images/Chontaduro.png',
+                              context,
+                            ),
+
+                            const SizedBox(height: 20),
+
+                            _buildProductCard(
+                              'Yogurt de Borojo y\nChontaduro sabor a miel.',
+                              'Una mezcla exótica y deliciosa para tu paladar.',
+                              'assets/images/Chontaduro.png',
+                              context,
+                            ),
+
+                            const SizedBox(height: 20),
+
+                            _buildProductCard(
+                              'Yogurt de Coco\ny Maracuyá.',
+                              'Refrescante y tropical, perfecto para cualquier momento.',
+                              'assets/images/Chontaduro.png',
+                              context,
+                            ),
+
+                            const SizedBox(height: 30),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
 
             // BARRA DE NAVEGACIÓN INFERIOR (reutilizable)
-            // Usamos CustomBottomNavBar con índice 0 (Home)
             const CustomBottomNavBar(currentIndex: 0),
           ],
         ),
@@ -94,7 +163,7 @@ class _HomePageState extends State<HomePage> {
         color: const Color(0xFF5B9EF5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -109,7 +178,9 @@ class _HomePageState extends State<HomePage> {
           IconButton(
             icon: const Icon(Icons.search, color: Colors.white, size: 28),
             onPressed: () {
-              print('Buscar');
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Busqueda proximamente')),
+              );
             },
           ),
         ],
@@ -172,54 +243,15 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // SECCIÓN "SABORES NUEVOS"
-  Widget _buildNewFlavorsSection() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Sabores Nuevos',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // LISTA DE PRODUCTOS
-          _buildProductCard(
-            'Yogurt de Chontaduro\nsabor a miel.',
-            'Disfruta de esta combinación única de sabores tropicales.',
-            'assets/images/yogurt_chontaduro.jpg',
-          ),
-
-          const SizedBox(height: 20),
-
-          _buildProductCard(
-            'Yogurt de Borojo y\nChontaduro sabor a miel.',
-            'Una mezcla exótica y deliciosa para tu paladar.',
-            'assets/images/yogurt_borojo.jpg',
-          ),
-
-          const SizedBox(height: 20),
-
-          _buildProductCard(
-            'Yogurt de Coco\ny Maracuyá.',
-            'Refrescante y tropical, perfecto para cualquier momento.',
-            'assets/images/yogurt_coco.jpg',
-          ),
-
-          const SizedBox(height: 20),
-        ],
-      ),
-    );
-  }
+  // (La sección de sabores fue inyectada en el build principal para usar el diseño naranja)
 
   // TARJETA DE PRODUCTO
-  Widget _buildProductCard(String title, String description, String imagePath) {
+  Widget _buildProductCard(
+    String title,
+    String description,
+    String imagePath,
+    BuildContext context,
+  ) {
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
@@ -227,7 +259,7 @@ class _HomePageState extends State<HomePage> {
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -291,7 +323,14 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 10),
                 GestureDetector(
                   onTap: () {
-                    print('Ver más: $title');
+                    Navigator.of(context).pushNamed(
+                      '/detail',
+                      arguments: {
+                        'title': title,
+                        'description': description,
+                        'image': imagePath,
+                      },
+                    );
                   },
                   child: const Text(
                     'Aprende Más >',

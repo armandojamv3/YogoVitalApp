@@ -60,7 +60,6 @@ class WelcomePage extends StatelessWidget {
                   width: desiredWidth,
                   child: ElevatedButton(
                     onPressed: () {
-                      print('🔵 Navegando a /login');
                       Navigator.pushNamed(context, '/login');
                     },
                     style: ElevatedButton.styleFrom(
@@ -88,7 +87,6 @@ class WelcomePage extends StatelessWidget {
                   width: desiredWidth,
                   child: OutlinedButton(
                     onPressed: () {
-                      print('🟢 Navegando a /register');
                       Navigator.pushNamed(context, '/register');
                     },
                     style: OutlinedButton.styleFrom(
@@ -114,7 +112,7 @@ class WelcomePage extends StatelessWidget {
                 // Texto "¿Olvidaste tu contraseña?"
                 TextButton(
                   onPressed: () {
-                    print('Recuperar contraseña');
+                    Navigator.pushNamed(context, '/recover');
                   },
                   child: const Text(
                     '¿Olvidaste tu contraseña?',

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../widgets/custom_bottom_nav_bar.dart';
+import 'package:yogo_vital_app/presentation/widgets/custom_bottom_nav_bar.dart';
 import 'categories/personalizado_page.dart';
+import 'categories/tradicionales_page.dart';
+import 'categories/predisenados_page.dart';
 
 class YogurtPage extends StatelessWidget {
   const YogurtPage({super.key});
@@ -19,7 +21,7 @@ class YogurtPage extends StatelessWidget {
                 color: const Color(0xFF5B9EF5),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 4,
                   ),
                 ],
@@ -34,7 +36,11 @@ class YogurtPage extends StatelessWidget {
                   Image.asset('assets/images/logo.png', height: 36),
                   IconButton(
                     icon: const Icon(Icons.search, color: Colors.white),
-                    onPressed: () => print('Buscar'),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Busqueda proximamente')),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -50,14 +56,12 @@ class YogurtPage extends StatelessWidget {
                     _buildCategoryCard(
                       context,
                       title: 'Sabores Tradicionales',
-                      imagePath: 'assets/images/yogurt_tradicional.jpg',
+                      imagePath: 'assets/images/YoguresTo.png',
                       onTap: () {
-                        // TODO: navegar a Tradicionales
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Ir a Sabores Tradicionales (pendiente)',
-                            ),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const TradicionalesPage(),
                           ),
                         );
                       },
@@ -68,14 +72,12 @@ class YogurtPage extends StatelessWidget {
                     _buildCategoryCard(
                       context,
                       title: 'Sabores Pre-diseñado',
-                      imagePath: 'assets/images/yogurt_predisenado.jpg',
+                      imagePath: 'assets/images/YoguresTo.png',
                       onTap: () {
-                        // TODO: navegar a Prediseñado
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Ir a Sabores Pre-diseñado (pendiente)',
-                            ),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const PredisenadosPage(),
                           ),
                         );
                       },
@@ -87,7 +89,7 @@ class YogurtPage extends StatelessWidget {
                     _buildCategoryCard(
                       context,
                       title: 'Sabores Personalizados',
-                      imagePath: 'assets/images/yogurt_personalizado.jpg',
+                      imagePath: 'assets/images/YoguresTo.png',
                       onTap: () {
                         Navigator.push(
                           context,

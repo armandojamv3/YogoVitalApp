@@ -159,10 +159,10 @@ class _RegisterPageState extends State<RegisterPage> {
                               // Mostrar diálogo indicando que se envió el correo de verificación.
                               final token =
                                   res['verification_token'] as String?;
-                              if (!mounted) return;
+                              if (!context.mounted) return;
                               await showDialog(
                                 context: context,
-                                builder: (_) => AlertDialog(
+                                builder: (dialogContext) => AlertDialog(
                                   title: const Text('Registro iniciado'),
                                   content: Text(
                                     token != null
@@ -171,16 +171,17 @@ class _RegisterPageState extends State<RegisterPage> {
                                   ),
                                   actions: [
                                     TextButton(
-                                      onPressed: () => Navigator.pop(context),
+                                      onPressed: () =>
+                                          Navigator.pop(dialogContext),
                                       child: const Text('OK'),
                                     ),
                                   ],
                                 ),
                               );
-                              if (!mounted) return;
+                              if (!context.mounted) return;
                               Navigator.pushReplacementNamed(context, '/login');
                             } catch (e) {
-                              if (!mounted) return;
+                              if (!context.mounted) return;
                               String msg = 'Error al registrar';
                               if (e is ApiException) {
                                 msg =
@@ -193,19 +194,22 @@ class _RegisterPageState extends State<RegisterPage> {
                               }
                               showDialog(
                                 context: context,
-                                builder: (_) => AlertDialog(
+                                builder: (dialogContext) => AlertDialog(
                                   title: const Text('Error'),
                                   content: Text(msg),
                                   actions: [
                                     TextButton(
-                                      onPressed: () => Navigator.pop(context),
+                                      onPressed: () =>
+                                          Navigator.pop(dialogContext),
                                       child: const Text('OK'),
                                     ),
                                   ],
                                 ),
                               );
                             } finally {
-                              if (mounted) setState(() => _loading = false);
+                              if (mounted) {
+                                setState(() => _loading = false);
+                              }
                             }
                           },
                     style: ElevatedButton.styleFrom(

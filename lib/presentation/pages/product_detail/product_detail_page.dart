@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../widgets/custom_bottom_nav_bar.dart';
+import 'package:yogo_vital_app/presentation/widgets/custom_bottom_nav_bar.dart';
 
 /// ProductDetailPage muestra los detalles de un producto: imagen, descripción y reseñas.
 class ProductDetailPage extends StatefulWidget {
@@ -92,7 +92,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         color: const Color(0xFF5B9EF5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -115,7 +115,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           ),
           IconButton(
             icon: const Icon(Icons.search, color: Colors.white, size: 24),
-            onPressed: () => print('Buscar'),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Busqueda proximamente')),
+              );
+            },
           ),
         ],
       ),
@@ -206,7 +210,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
             ),
           ),
           const SizedBox(height: 16),
-          ..._reviews.map((r) => _buildReviewCard(r)).toList(),
+          ..._reviews.map((r) => _buildReviewCard(r)),
         ],
       ),
     );

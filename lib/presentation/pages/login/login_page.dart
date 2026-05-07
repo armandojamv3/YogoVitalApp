@@ -188,7 +188,7 @@ class _LoginPageState extends State<LoginPage> {
                               final res = await repo.login(email, password);
                               // `AuthRepository.login` guarda el token si existe.
                               final token = res['token'] as String?;
-                              if (!mounted) return;
+                              if (!context.mounted) return;
                               if (token != null && token.isNotEmpty) {
                                 Navigator.pushReplacementNamed(
                                   context,
@@ -200,12 +200,13 @@ class _LoginPageState extends State<LoginPage> {
                                         .toString();
                                 showDialog(
                                   context: context,
-                                  builder: (_) => AlertDialog(
+                                  builder: (dialogContext) => AlertDialog(
                                     title: const Text('Error'),
                                     content: Text(msg),
                                     actions: [
                                       TextButton(
-                                        onPressed: () => Navigator.pop(context),
+                                        onPressed: () =>
+                                            Navigator.pop(dialogContext),
                                         child: const Text('OK'),
                                       ),
                                     ],
@@ -213,7 +214,7 @@ class _LoginPageState extends State<LoginPage> {
                                 );
                               }
                             } catch (e) {
-                              if (!mounted) return;
+                              if (!context.mounted) return;
                               if (e is ApiException) {
                                 final msg =
                                     (e.body['message'] ??
@@ -222,12 +223,13 @@ class _LoginPageState extends State<LoginPage> {
                                         .toString();
                                 showDialog(
                                   context: context,
-                                  builder: (_) => AlertDialog(
+                                  builder: (dialogContext) => AlertDialog(
                                     title: const Text('Error'),
                                     content: Text(msg),
                                     actions: [
                                       TextButton(
-                                        onPressed: () => Navigator.pop(context),
+                                        onPressed: () =>
+                                            Navigator.pop(dialogContext),
                                         child: const Text('OK'),
                                       ),
                                     ],
@@ -236,12 +238,13 @@ class _LoginPageState extends State<LoginPage> {
                               } else {
                                 showDialog(
                                   context: context,
-                                  builder: (_) => AlertDialog(
+                                  builder: (dialogContext) => AlertDialog(
                                     title: const Text('Error'),
                                     content: Text(e.toString()),
                                     actions: [
                                       TextButton(
-                                        onPressed: () => Navigator.pop(context),
+                                        onPressed: () =>
+                                            Navigator.pop(dialogContext),
                                         child: const Text('OK'),
                                       ),
                                     ],
@@ -249,7 +252,9 @@ class _LoginPageState extends State<LoginPage> {
                                 );
                               }
                             } finally {
-                              if (mounted) setState(() => _loading = false);
+                              if (mounted) {
+                                setState(() => _loading = false);
+                              }
                             }
                           },
                     style: ElevatedButton.styleFrom(
@@ -284,6 +289,17 @@ class _LoginPageState extends State<LoginPage> {
                               color: Colors.white,
                             ),
                           ),
+                  ),
+                ),
+
+                const SizedBox(height: 30),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/recover');
+                  },
+                  child: const Text(
+                    '¿Olvidaste tu contraseña?',
+                    style: TextStyle(color: Colors.white, fontSize: 14),
                   ),
                 ),
 

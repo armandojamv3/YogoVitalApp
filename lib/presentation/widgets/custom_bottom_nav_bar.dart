@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import '../pages/home/home_page.dart';
-import '../pages/yogurt/yogurt_page.dart';
-import '../pages/cart/cart_page.dart';
-import '../pages/history/history_page.dart';
-import '../pages/account/account_page.dart';
+
+// NOTE: We avoid importing page widgets here to prevent circular imports.
+// Navigation is done via named routes. Ensure `main.dart` registers the
+// routes: '/home', '/yogurt', '/cart', '/history', '/account'.
 
 // Definimos el color primario de tu aplicación
 const Color primaryBlue = Color(0xFF4A8FE7);
@@ -23,7 +22,7 @@ class CustomBottomNavBar extends StatelessWidget {
   });
 
   // Estructura de cada ítem de la barra de navegación
-  static const List<_NavItem> items = [
+  static const List<_NavItem> _items = [
     _NavItem(icon: Icons.home, label: 'Home'), // Index 0
     _NavItem(icon: Icons.local_drink, label: 'Yogures'), // Index 1
     _NavItem(icon: Icons.shopping_cart, label: 'Carrito'), // Index 2
@@ -41,8 +40,8 @@ class CustomBottomNavBar extends StatelessWidget {
       height: 60,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: List.generate(items.length, (index) {
-          final item = items[index];
+        children: List.generate(_items.length, (index) {
+          final item = _items[index];
           final isSelected = index == currentIndex;
 
           return _buildNavItem(
@@ -97,30 +96,21 @@ class CustomBottomNavBar extends StatelessWidget {
   void _defaultNavigate(BuildContext context, int index) {
     switch (index) {
       case 0: // Home: limpiar pila y abrir HomePage
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const HomePage()),
-          (route) => false,
-        );
+        Navigator.of(
+          context,
+        ).pushNamedAndRemoveUntil('/home', (route) => false);
         break;
       case 1: // Yogures: reemplazar pantalla actual
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const YogurtPage()),
-        );
+        Navigator.of(context).pushReplacementNamed('/yogurt');
         break;
       case 2: // Carrito
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => const CartPage()));
+        Navigator.of(context).pushNamed('/cart');
         break;
       case 3: // Historial
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => const HistoryPage()));
+        Navigator.of(context).pushNamed('/history');
         break;
       case 4: // Cuenta
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => const AccountPage()));
+        Navigator.of(context).pushNamed('/account');
         break;
       default:
         break;

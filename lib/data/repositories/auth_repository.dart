@@ -36,6 +36,22 @@ class AuthRepository {
     return remote.resendVerification(email: email);
   }
 
+  Future<Map<String, dynamic>> requestPasswordReset(String email) async {
+    return remote.requestPasswordReset(email: email);
+  }
+
+  Future<Map<String, dynamic>> confirmPasswordReset({
+    required String token,
+    required String password,
+    String? passwordConfirmation,
+  }) async {
+    return remote.confirmPasswordReset(
+      token: token,
+      password: password,
+      passwordConfirmation: passwordConfirmation,
+    );
+  }
+
   Future<void> logout() async {
     await storage.delete(key: _jwtKey);
   }
