@@ -1,0 +1,142 @@
+{
+  "info": {
+    "name": "Yogo Vital Backend",
+    "_postman_id": "yogo-vital-backend-collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Register",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@example.com\",\n  \"password\": \"MiPass123!\",\n  \"password_confirmation\": \"MiPass123!\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/auth/register",
+          "host": ["{{base_url}}"],
+          "path": ["auth", "register"]
+        }
+      }
+      ,
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200 or 201', function () { pm.response.to.have.status(pm.response.code); });",
+              "try {",
+              "  var body = pm.response.json();",
+              "  var token = body.verification_token || (body.data && body.data.verification_token) || (body.user && body.verification_token);",
+              "  if (token) { pm.environment.set('verification_token', token); console.log('Saved verification_token'); }",
+              "} catch (e) { console.log('No verification_token present in response'); }"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Verify (usar token)",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/auth/verify?token={{verification_token}}",
+          "host": ["{{base_url}}"],
+          "path": ["auth", "verify"],
+          "query": [
+            { "key": "token", "value": "{{verification_token}}" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Resend Verification",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"test@example.com\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/auth/resend_verification",
+          "host": ["{{base_url}}"],
+          "path": ["auth", "resend_verification"]
+        }
+      }
+      ,
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "try {",
+              "  var body = pm.response.json();",
+              "  var token = body.verification_token || (body.data && body.data.verification_token);",
+              "  if (token) { pm.environment.set('verification_token', token); console.log('Saved verification_token from resend'); }",
+              "} catch (e) { console.log('No verification_token present in resend response'); }"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"MiPass123!\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/auth/login",
+          "host": ["{{base_url}}"],
+          "path": ["auth", "login"]
+        }
+      }
+      ,
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Login success', function () { pm.response.to.have.status(200); });",
+              "try {",
+              "  var body = pm.response.json();",
+              "  var token = body.token || (body.data && body.data.token) || (body.access_token && body.access_token.token);",
+              "  if (token) { pm.environment.set('jwt', token); console.log('Saved jwt'); }",
+              "} catch (e) { console.log('No jwt present in response'); }"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Protected Example (requires JWT)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{jwt}}" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/protected",
+          "host": ["{{base_url}}"],
+          "path": ["protected"]
+        }
+      }
+    }
+  ]
+}

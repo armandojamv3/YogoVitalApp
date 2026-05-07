@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:yogo_vital_app/data/repositories/auth_repository.dart';
+import 'package:yogo_vital_app/core/network/api_client.dart';
 
 //Esta clase HEREDA de StatefulWidget (puede cambiar)
 class LoginPage extends StatefulWidget {
@@ -19,6 +22,16 @@ class _LoginPageState extends State<LoginPage> {
   // `bool` = tipo de dato (booleano: true o false)
   bool _obscurePassword =
       true; // Variable para ocultar/mostrar contraseña,comienza siendo verdadero
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool _loading = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   // build Método que construye la interfaz de usuario
@@ -81,11 +94,13 @@ class _LoginPageState extends State<LoginPage> {
                       30,
                     ), // Bordes redondeados con radio de 30
                   ),
-                  child: const TextField(
-                    decoration: InputDecoration(
+                  child: TextField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(
                       //Decoración del campo de texto
                       border: InputBorder.none, // Sin borde
-                      hintText: 'Correo electronico',
+                      hintText: 'Correo electrónico',
                       contentPadding: EdgeInsets.symmetric(
                         // Espaciado interno
                         horizontal: 25, // Espacio horizontal de 25 píxeles
@@ -107,6 +122,7 @@ class _LoginPageState extends State<LoginPage> {
                     borderRadius: BorderRadius.circular(30),
                   ),
                   child: TextField(
+                    controller: _passwordController,
                     obscureText:
                         _obscurePassword, // Oculta el texto si _obscurePassword es true
                     decoration: InputDecoration(
@@ -150,11 +166,92 @@ class _LoginPageState extends State<LoginPage> {
                       MediaQuery.of(context).size.width *
                       0.4, // Ancho = 40% del ancho de la pantalla
                   child: ElevatedButton(
-                    onPressed: () {
-                      // Acción al tocar el botón (vacío por ahora)
-                      print('Iniciando xd sesión...');
-                      Navigator.pushReplacementNamed(context, '/home');
-                    },
+                    onPressed: _loading
+                        ? null
+                        : () async {
+                            final repo = Provider.of<AuthRepository>(
+                              context,
+                              listen: false,
+                            );
+                            final email = _emailController.text.trim();
+                            final password = _passwordController.text;
+                            if (email.isEmpty || password.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Ingresa correo y contraseña'),
+                                ),
+                              );
+                              return;
+                            }
+                            setState(() => _loading = true);
+                            try {
+                              final res = await repo.login(email, password);
+                              // `AuthRepository.login` guarda el token si existe.
+                              final token = res['token'] as String?;
+                              if (!mounted) return;
+                              if (token != null && token.isNotEmpty) {
+                                Navigator.pushReplacementNamed(
+                                  context,
+                                  '/home',
+                                );
+                              } else {
+                                final msg =
+                                    (res['message'] ?? 'Error desconocido')
+                                        .toString();
+                                showDialog(
+                                  context: context,
+                                  builder: (_) => AlertDialog(
+                                    title: const Text('Error'),
+                                    content: Text(msg),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: const Text('OK'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (!mounted) return;
+                              if (e is ApiException) {
+                                final msg =
+                                    (e.body['message'] ??
+                                            e.body['error'] ??
+                                            'Error de autenticación')
+                                        .toString();
+                                showDialog(
+                                  context: context,
+                                  builder: (_) => AlertDialog(
+                                    title: const Text('Error'),
+                                    content: Text(msg),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: const Text('OK'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              } else {
+                                showDialog(
+                                  context: context,
+                                  builder: (_) => AlertDialog(
+                                    title: const Text('Error'),
+                                    content: Text(e.toString()),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: const Text('OK'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }
+                            } finally {
+                              if (mounted) setState(() => _loading = false);
+                            }
+                          },
                     style: ElevatedButton.styleFrom(
                       // Estilo del botón
                       backgroundColor: const Color(0xFF0D47A1),
@@ -169,15 +266,24 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
 
-                    child: const Text(
-                      // Texto del botón
-                      'Iniciar  sesion',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
+                    child: _loading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            // Texto del botón
+                            'Iniciar sesión',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
                   ),
                 ),
 

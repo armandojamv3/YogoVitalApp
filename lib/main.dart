@@ -1,33 +1,48 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:yogo_vital_app/core/network/api_client.dart';
+import 'package:yogo_vital_app/data/datasources/auth_remote_datasource.dart';
+import 'package:yogo_vital_app/data/repositories/auth_repository.dart';
 import 'package:yogo_vital_app/presentation/pages/home/home_page.dart';
 import 'presentation/pages/splash/welcome_page.dart';
 import 'presentation/pages/login/login_page.dart';
 import 'presentation/pages/register/register_page.dart';
 
 void main() {
-  runApp(const MyApp());
+  // Construir dependencias mínimas aquí para inyección via Provider
+  final apiClient = ApiClient(baseUrl: 'http://localhost:8080');
+  final authRemote = AuthRemoteDataSource(apiClient: apiClient);
+  final authRepository = AuthRepository(remote: authRemote);
+
+  runApp(MyApp(authRepository: authRepository));
 }
 
-// StatefulWidget es un widget que No cambia de estado
 class MyApp extends StatelessWidget {
-  const MyApp({
-    super.key,
-  }); // Crea una instancia de MyApp,Constructor (forma de crear el objeto)
+  final AuthRepository? authRepository;
+  const MyApp({super.key, this.authRepository});
 
-  @override // Sobrescribe el método build de StatelessWidget
+  @override
   Widget build(BuildContext context) {
-    // Construye y devuelve un widget
-    return MaterialApp(
-      //Devuelve MaterialApp (el contenedor principal)
-      debugShowCheckedModeBanner: false,
-      title: 'Yogo Vital App',
-      initialRoute: '/',
-      routes: {
-        '/': (_) => const WelcomePage(),
-        '/login': (_) => const LoginPage(),
-        '/register': (_) => const RegisterPage(),
-        '/home': (_) => const HomePage(),
-      },
+    final repo =
+        authRepository ??
+        AuthRepository(
+          remote: AuthRemoteDataSource(
+            apiClient: ApiClient(baseUrl: 'http://localhost:8080'),
+          ),
+        );
+    return Provider<AuthRepository>.value(
+      value: repo,
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Yogo Vital App',
+        initialRoute: '/',
+        routes: {
+          '/': (_) => const WelcomePage(),
+          '/login': (_) => const LoginPage(),
+          '/register': (_) => const RegisterPage(),
+          '/home': (_) => const HomePage(),
+        },
+      ),
     );
   }
 }
