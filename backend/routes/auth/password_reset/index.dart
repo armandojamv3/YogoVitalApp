@@ -1,6 +1,6 @@
 import 'package:dart_frog/dart_frog.dart';
-import '../../lib/db.dart';
-import '../../lib/services/auth_service.dart' as svc;
+import '../../../lib/db.dart';
+import '../../../lib/services/auth_service.dart' as svc;
 
 // POST /auth/password_reset
 Future<Response> onRequest(RequestContext context) async {

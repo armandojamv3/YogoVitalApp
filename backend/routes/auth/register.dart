@@ -12,8 +12,9 @@ Future<Response> onRequest(RequestContext context) async {
       body = await request.json() as Map<String, dynamic>;
     } on FormatException catch (e) {
       return Response.json(
-          statusCode: 400,
-          body: {'error': 'Invalid JSON', 'details': e.message});
+        statusCode: 400,
+        body: {'error': 'Invalid JSON', 'details': e.message},
+      );
     }
     final email = body['email']?.toString();
     final password = body['password']?.toString();
@@ -22,26 +23,34 @@ Future<Response> onRequest(RequestContext context) async {
     final name = body['name']?.toString() ?? '';
     if (email == null || password == null) {
       return Response.json(
-          statusCode: 400, body: {'error': 'email and password required'});
+        statusCode: 400,
+        body: {'error': 'email and password required'},
+      );
     }
 
     // If client sent a confirmation field, validate it matches the password
     if (passwordConfirm != null && password != passwordConfirm) {
       return Response.json(
-          statusCode: 400,
-          body: {'error': 'password and password_confirmation do not match'});
+        statusCode: 400,
+        body: {'error': 'password and password_confirmation do not match'},
+      );
     }
 
     // Password strength: require minimum 8 characters, at least one letter and one number
     final pwd = password;
     final pwdPattern = RegExp(r'^(?=.*[A-Za-z])(?=.*\d).{8,}$');
     if (!pwdPattern.hasMatch(pwd)) {
-      return Response.json(statusCode: 400, body: {
-        'error':
-            'password must be at least 8 characters and include at least one letter and one number'
-      });
+      return Response.json(
+        statusCode: 400,
+        body: {
+          'error':
+              'password must be at least 8 characters and include at least one letter and one number',
+        },
+      );
     }
 
+    // Esta ruta no guarda directamente en la tabla final: delega al servicio.
+    // El servicio crea pending_users y el token de verificación en Supabase.
     final conn = await createConnection();
     final auth = AuthService(conn);
     try {
@@ -51,11 +60,14 @@ Future<Response> onRequest(RequestContext context) async {
       if (user.containsKey('verification_token')) {
         return Response.json(body: {'user': user});
       }
-      return Response.json(statusCode: 201, body: {
-        'message':
-            'Registration successful. A verification email was sent if the address is valid.',
-        'user': user
-      });
+      return Response.json(
+        statusCode: 201,
+        body: {
+          'message':
+              'Registration successful. A verification email was sent if the address is valid.',
+          'user': user,
+        },
+      );
     } catch (e, st) {
       // Log and return a conflict if user exists or other known issue
       print('Register error: $e');
@@ -79,13 +91,18 @@ Future<Response> onRequest(RequestContext context) async {
       }
     }
     if (dev == 'true') {
-      return Response.json(statusCode: 500, body: {
-        'error': 'Internal Server Error',
-        'details': e.toString(),
-        'stack': st.toString()
-      });
+      return Response.json(
+        statusCode: 500,
+        body: {
+          'error': 'Internal Server Error',
+          'details': e.toString(),
+          'stack': st.toString(),
+        },
+      );
     }
     return Response.json(
-        statusCode: 500, body: {'error': 'Internal Server Error'});
+      statusCode: 500,
+      body: {'error': 'Internal Server Error'},
+    );
   }
 }

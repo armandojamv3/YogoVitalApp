@@ -14,17 +14,18 @@ Future<void> main() async {
 
     // Conteo de usuarios
     try {
-      final countRes = await conn.query('SELECT COUNT(*) FROM public.users');
-      print('Usuarios en public.users: ${countRes.first.first}');
+      final countRes = await conn.query('SELECT COUNT(*) FROM public.usuario');
+      print('Usuarios en public.usuario: ${countRes.first.first}');
     } catch (e) {
-      print('No se pudo contar filas en public.users: $e');
+      print('No se pudo contar filas en public.usuario: $e');
     }
 
     // Listar columnas de la tabla users
     try {
       final cols = await conn.query(
-          "SELECT column_name, data_type FROM information_schema.columns WHERE table_schema='public' AND table_name='users'");
-      print('Columnas en public.users:');
+        "SELECT column_name, data_type FROM information_schema.columns WHERE table_schema='public' AND table_name='usuario'",
+      );
+      print('Columnas en public.usuario:');
       for (final row in cols) {
         print(' - ${row[0]} : ${row[1]}');
       }

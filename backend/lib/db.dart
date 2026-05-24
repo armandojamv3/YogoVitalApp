@@ -2,7 +2,8 @@ import 'dart:io';
 
 import 'package:postgres/postgres.dart';
 
-/// Helper to create a Postgres connection from DATABASE_URL
+/// Conexión del backend hacia la base de datos de Supabase.
+/// Lee DATABASE_URL desde el entorno o desde el archivo .env.
 Future<PostgreSQLConnection> createConnection() async {
   // Prefer environment variable, fall back to a local `.env` file if present.
   String? databaseUrl = Platform.environment['DATABASE_URL'];
@@ -38,11 +39,24 @@ Future<PostgreSQLConnection> createConnection() async {
   final port = uri.port;
   final databaseName = uri.pathSegments.isNotEmpty ? uri.pathSegments[0] : '';
   final username = uri.userInfo.split(':').first;
-  final password =
-      uri.userInfo.contains(':') ? uri.userInfo.split(':')[1] : null;
+  final password = uri.userInfo.contains(':')
+      ? uri.userInfo.split(':')[1]
+      : null;
+  final sslMode = uri.queryParameters['sslmode']?.toLowerCase();
+  final useSSL =
+      sslMode == 'require' ||
+      sslMode == 'verify-full' ||
+      sslMode == 'verify-ca';
 
-  final conn = PostgreSQLConnection(host, port, databaseName,
-      username: username, password: password);
+  // Abre la conexión real contra el host de Supabase usando postgres.
+  final conn = PostgreSQLConnection(
+    host,
+    port,
+    databaseName,
+    username: username,
+    password: password,
+    useSSL: useSSL,
+  );
   await conn.open();
   return conn;
 }

@@ -12,8 +12,8 @@ import '../routes/auth/verify.dart' as auth_verify;
 import '../routes/auth/resend_verification.dart' as auth_resend_verification;
 import '../routes/auth/register.dart' as auth_register;
 import '../routes/auth/password_reset_confirm.dart' as auth_password_reset_confirm;
-import '../routes/auth/password_reset.dart' as auth_password_reset;
 import '../routes/auth/login.dart' as auth_login;
+import '../routes/auth/password_reset/index.dart' as auth_password_reset_index;
 import '../routes/auth/password_reset/confirm.dart' as auth_password_reset_confirm;
 
 import '../routes/_middleware.dart' as middleware;
@@ -41,14 +41,14 @@ Handler buildRootHandler() {
 Handler buildAuthPasswordResetHandler() {
   final pipeline = const Pipeline();
   final router = Router()
-    ..all('/confirm', (context) => auth_password_reset_confirm.onRequest(context,));
+    ..all('/', (context) => auth_password_reset_index.onRequest(context,))..all('/confirm', (context) => auth_password_reset_confirm.onRequest(context,));
   return pipeline.addHandler(router);
 }
 
 Handler buildAuthHandler() {
   final pipeline = const Pipeline();
   final router = Router()
-    ..all('/verify', (context) => auth_verify.onRequest(context,))..all('/resend_verification', (context) => auth_resend_verification.onRequest(context,))..all('/register', (context) => auth_register.onRequest(context,))..all('/password_reset_confirm', (context) => auth_password_reset_confirm.onRequest(context,))..all('/password_reset', (context) => auth_password_reset.onRequest(context,))..all('/login', (context) => auth_login.onRequest(context,));
+    ..all('/verify', (context) => auth_verify.onRequest(context,))..all('/resend_verification', (context) => auth_resend_verification.onRequest(context,))..all('/register', (context) => auth_register.onRequest(context,))..all('/password_reset_confirm', (context) => auth_password_reset_confirm.onRequest(context,))..all('/login', (context) => auth_login.onRequest(context,));
   return pipeline.addHandler(router);
 }
 

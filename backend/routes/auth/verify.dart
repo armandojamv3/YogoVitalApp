@@ -19,6 +19,7 @@ Future<Response> _handle(Request request) async {
     return Response.json(statusCode: 400, body: {'error': 'Missing token'});
   }
 
+  // Este endpoint confirma el token y convierte la cuenta temporal en final.
   final connection = await createConnection();
   try {
     final rows = await connection.query(
@@ -35,9 +36,9 @@ Future<Response> _handle(Request request) async {
     }
 
     final row = rows.first;
-    final id = row[0] as int;
-    final userId = row[1] as int?;
-    final pendingUserId = row[2] as int?;
+    final id = row[0].toString();
+    final userId = row[1]?.toString();
+    final pendingUserId = row[2]?.toString();
     final used = row[3] as bool;
     final expiresAt = row[4] as DateTime;
 
@@ -52,7 +53,7 @@ Future<Response> _handle(Request request) async {
     }
 
     if (pendingUserId != null) {
-      // promote pending user to final users table
+      // 1) Buscar los datos que quedaron en pending_users.
       final pendingRows = await connection.query(
         'SELECT email, password_hash, name FROM public.pending_users WHERE id = @id',
         substitutionValues: {'id': pendingUserId},
@@ -69,34 +70,45 @@ Future<Response> _handle(Request request) async {
       final name = prow[2] as String?;
 
       try {
-        await connection.query(
+        // 2) Crear el usuario definitivo en la tabla usuario.
+        // Insert into usuario and get the id
+        final usuarioRows = await connection.query(
           '''
-          INSERT INTO public.users (email, password_hash, name, email_verified)
-          VALUES (@email, @password_hash, @name, true)
-          RETURNING id
+          INSERT INTO public.usuario (nombre, correo, password_hash, rol, email_verified)
+          VALUES (@nombre, @correo, @password_hash, 'cliente', true)
+          RETURNING id_usuario
         ''',
           substitutionValues: {
-            'email': email,
+            'nombre': name,
+            'correo': email,
             'password_hash': passwordHash,
-            'name': name,
           },
         );
-        // mark token used
+
+        if (usuarioRows.isNotEmpty) {
+          final idUsuario = usuarioRows.first[0];
+          // 3) Crear el perfil cliente ligado al usuario recién creado.
+          await connection.query(
+            'INSERT INTO public.cliente (id_usuario) VALUES (@id_usuario)',
+            substitutionValues: {'id_usuario': idUsuario},
+          );
+        }
+
+        // 4) Marcar el token como usado y borrar el registro temporal.
         await connection.query(
           'UPDATE public.email_verification_tokens SET used = true, used_at = NOW() WHERE id = @id',
           substitutionValues: {'id': id},
         );
-        // delete pending user record
         await connection.query(
           'DELETE FROM public.pending_users WHERE id = @id',
           substitutionValues: {'id': pendingUserId},
         );
       } catch (e) {
-        // If insert failed (e.g., unique constraint), try to mark existing user as verified
+        // Si ya existía el usuario, solo lo marcamos como verificado.
         try {
           await connection.query(
-            'UPDATE public.users SET email_verified = true, updated_at = NOW() WHERE email = @email',
-            substitutionValues: {'email': prow[0]},
+            'UPDATE public.usuario SET email_verified = true, rol = COALESCE(rol, \'cliente\'), updated_at = NOW() WHERE correo = @correo',
+            substitutionValues: {'correo': prow[0]},
           );
           await connection.query(
             'UPDATE public.email_verification_tokens SET used = true, used_at = NOW() WHERE id = @id',
@@ -114,7 +126,7 @@ Future<Response> _handle(Request request) async {
     } else if (userId != null) {
       // mark user as verified and token as used
       await connection.query(
-        'UPDATE public.users SET email_verified = true, updated_at = NOW() WHERE id = @id',
+        'UPDATE public.usuario SET email_verified = true, rol = COALESCE(rol, \'cliente\'), updated_at = NOW() WHERE id_usuario = @id',
         substitutionValues: {'id': userId},
       );
       await connection.query(

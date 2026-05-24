@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yogo_vital_app/data/repositories/auth_repository.dart';
-import 'package:yogo_vital_app/core/network/api_client.dart';
 import 'package:flutter/foundation.dart';
 
 class RecoverPasswordPage extends StatefulWidget {
