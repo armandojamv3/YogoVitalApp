@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   email VARCHAR(255) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
   name VARCHAR(255),
+  telefono VARCHAR(50),
   email_verified BOOLEAN DEFAULT FALSE,
   verification_token VARCHAR(255),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),

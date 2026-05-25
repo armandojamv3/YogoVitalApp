@@ -9,10 +9,16 @@ class AuthRemoteDataSource {
   Future<Map<String, dynamic>> register({
     required String name,
     required String email,
+    required String phone,
     required String password,
     String? passwordConfirmation,
   }) async {
-    final body = {'name': name, 'email': email, 'password': password};
+    final body = {
+      'name': name,
+      'email': email,
+      'phone': phone,
+      'password': password,
+    };
     if (passwordConfirmation != null) {
       body['password_confirmation'] = passwordConfirmation;
     }

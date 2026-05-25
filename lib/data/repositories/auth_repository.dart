@@ -12,12 +12,14 @@ class AuthRepository {
   Future<Map<String, dynamic>> register(
     String name,
     String email,
+    String phone,
     String password, {
     String? passwordConfirmation,
   }) async {
     return remote.register(
       name: name,
       email: email,
+      phone: phone,
       password: password,
       passwordConfirmation: passwordConfirmation,
     );

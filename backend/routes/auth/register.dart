@@ -17,14 +17,33 @@ Future<Response> onRequest(RequestContext context) async {
       );
     }
     final email = body['email']?.toString();
+    final phone = (body['phone'] ?? body['telefono'])?.toString();
     final password = body['password']?.toString();
     final passwordConfirm =
         (body['password_confirmation'] ?? body['confirm_password'])?.toString();
     final name = body['name']?.toString() ?? '';
-    if (email == null || password == null) {
+    if (email == null ||
+        phone == null ||
+        password == null ||
+        name.trim().isEmpty) {
       return Response.json(
         statusCode: 400,
-        body: {'error': 'email and password required'},
+        body: {'error': 'name, email, phone and password required'},
+      );
+    }
+
+    final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+    if (!emailRegex.hasMatch(email)) {
+      return Response.json(
+        statusCode: 400,
+        body: {'error': 'invalid email format'},
+      );
+    }
+
+    if (phone.trim().isEmpty) {
+      return Response.json(
+        statusCode: 400,
+        body: {'error': 'phone is required'},
       );
     }
 
@@ -54,7 +73,7 @@ Future<Response> onRequest(RequestContext context) async {
     final conn = await createConnection();
     final auth = AuthService(conn);
     try {
-      final user = await auth.register(email, password, name);
+      final user = await auth.register(email, phone, password, name);
       await conn.close();
       // If running in DEV mode, the service may include the verification token
       if (user.containsKey('verification_token')) {

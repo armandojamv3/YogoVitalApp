@@ -1,0 +1,5 @@
+ALTER TABLE IF EXISTS public.pending_users
+  ADD COLUMN IF NOT EXISTS telefono TEXT;
+
+ALTER TABLE IF EXISTS public.usuario
+  ADD COLUMN IF NOT EXISTS telefono TEXT;

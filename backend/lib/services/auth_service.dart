@@ -16,6 +16,7 @@ class AuthService {
 
   Future<Map<String, dynamic>> register(
     String email,
+    String phone,
     String password,
     String name,
   ) async {
@@ -28,52 +29,39 @@ class AuthService {
       throw Exception('User already exists');
     }
 
-    // 2) Si no existe, guarda la cuenta temporal en pending_users.
+    // 2) Si existe un registro temporal, también se rechaza para evitar duplicados.
     final existsPending = await connection.query(
       'SELECT id FROM public.pending_users WHERE email = @email',
       substitutionValues: {'email': email},
     );
+    if (existsPending.isNotEmpty) {
+      throw Exception('User already exists');
+    }
 
     final passwordHash = BCrypt.hashpw(password, BCrypt.gensalt());
 
-    String pendingId;
-    Map<String, dynamic> rowMap;
-
-    if (existsPending.isNotEmpty) {
-      pendingId = existsPending.first[0].toString();
-      final r = await connection.query(
-        'SELECT id, email, name, created_at FROM public.pending_users WHERE id = @id',
-        substitutionValues: {'id': pendingId},
-      );
-      final row = r.first;
-      rowMap = {
-        'id': row[0],
-        'email': row[1],
-        'name': row[2],
-        'created_at': row[3].toString(),
-      };
-    } else {
-      final insert = await connection.query(
-        '''
-        INSERT INTO public.pending_users (email, password_hash, name)
-        VALUES (@email, @password_hash, @name)
-        RETURNING id, email, name, created_at
-      ''',
-        substitutionValues: {
-          'email': email,
-          'password_hash': passwordHash,
-          'name': name,
-        },
-      );
-      final row = insert.first;
-      pendingId = row[0].toString();
-      rowMap = {
-        'id': row[0],
-        'email': row[1],
-        'name': row[2],
-        'created_at': row[3].toString(),
-      };
-    }
+    final insert = await connection.query(
+      '''
+      INSERT INTO public.pending_users (email, password_hash, name, telefono)
+      VALUES (@email, @password_hash, @name, @telefono)
+      RETURNING id, email, name, telefono, created_at
+    ''',
+      substitutionValues: {
+        'email': email,
+        'password_hash': passwordHash,
+        'name': name,
+        'telefono': phone,
+      },
+    );
+    final row = insert.first;
+    final pendingId = row[0].toString();
+    final rowMap = {
+      'id': row[0],
+      'email': row[1],
+      'name': row[2],
+      'telefono': row[3],
+      'created_at': row[4].toString(),
+    };
 
     // 3) Genera un token de verificación y lo asocia al registro pendiente.
     final token = _generateToken();

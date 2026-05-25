@@ -55,7 +55,7 @@ Future<Response> _handle(Request request) async {
     if (pendingUserId != null) {
       // 1) Buscar los datos que quedaron en pending_users.
       final pendingRows = await connection.query(
-        'SELECT email, password_hash, name FROM public.pending_users WHERE id = @id',
+        'SELECT email, password_hash, name, telefono FROM public.pending_users WHERE id = @id',
         substitutionValues: {'id': pendingUserId},
       );
       if (pendingRows.isEmpty) {
@@ -68,20 +68,22 @@ Future<Response> _handle(Request request) async {
       final email = prow[0] as String;
       final passwordHash = prow[1] as String;
       final name = prow[2] as String?;
+      final telefono = prow[3] as String?;
 
       try {
         // 2) Crear el usuario definitivo en la tabla usuario.
         // Insert into usuario and get the id
         final usuarioRows = await connection.query(
           '''
-          INSERT INTO public.usuario (nombre, correo, password_hash, rol, email_verified)
-          VALUES (@nombre, @correo, @password_hash, 'cliente', true)
+          INSERT INTO public.usuario (nombre, correo, password_hash, telefono, rol, email_verified)
+          VALUES (@nombre, @correo, @password_hash, @telefono, 'cliente', true)
           RETURNING id_usuario
         ''',
           substitutionValues: {
             'nombre': name,
             'correo': email,
             'password_hash': passwordHash,
+            'telefono': telefono,
           },
         );
 
