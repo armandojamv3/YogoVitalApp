@@ -25,6 +25,10 @@ class AuthRepository {
     );
   }
 
+  Future<Map<String, dynamic>> checkEmail(String email) async {
+    return remote.checkEmail(email: email);
+  }
+
   Future<Map<String, dynamic>> login(String email, String password) async {
     final res = await remote.login(email: email, password: password);
     final token = res['token'] as String?;

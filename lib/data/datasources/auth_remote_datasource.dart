@@ -25,6 +25,12 @@ class AuthRemoteDataSource {
     return apiClient.post('/auth/register', body);
   }
 
+  Future<Map<String, dynamic>> checkEmail({required String email}) async {
+    return apiClient.get(
+      '/auth/check-email?email=${Uri.encodeQueryComponent(email)}',
+    );
+  }
+
   Future<Map<String, dynamic>> login({
     required String email,
     required String password,

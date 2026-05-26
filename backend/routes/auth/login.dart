@@ -29,14 +29,21 @@ Future<Response> onRequest(RequestContext context) async {
       await conn.close();
       return Response.json(body: result);
     } catch (e, st) {
+      await conn.close();
+      // Handle LoginException with field info
+      if (e is LoginException) {
+        print('Login failed - ${e.field}: ${e.message}');
+        return Response.json(
+          statusCode: e.statusCode,
+          body: {
+            'error': e.message,
+            'field': e.field, // 'email' or 'password'
+          },
+        );
+      }
       print('Login error: $e');
       print(st);
-      await conn.close();
-      final msg = e.toString();
-      if (msg.contains('not verified')) {
-        return Response.json(statusCode: 403, body: {'error': msg});
-      }
-      return Response.json(statusCode: 401, body: {'error': msg});
+      return Response.json(statusCode: 401, body: {'error': e.toString()});
     }
   } catch (e, st) {
     print('Unhandled error in /auth/login: $e');

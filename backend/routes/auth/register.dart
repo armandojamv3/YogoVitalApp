@@ -75,9 +75,20 @@ Future<Response> onRequest(RequestContext context) async {
     try {
       final user = await auth.register(email, phone, password, name);
       await conn.close();
+      final verificationEmailSent = user['verification_email_sent'] == true;
       // If running in DEV mode, the service may include the verification token
       if (user.containsKey('verification_token')) {
         return Response.json(body: {'user': user});
+      }
+      if (!verificationEmailSent) {
+        return Response.json(
+          statusCode: 202,
+          body: {
+            'message':
+                'Registration created, but the verification email could not be sent. Check backend logs or use resend verification.',
+            'user': user,
+          },
+        );
       }
       return Response.json(
         statusCode: 201,

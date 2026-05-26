@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yogo_vital_app/data/repositories/auth_repository.dart';
@@ -12,6 +14,10 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final RegExp _emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+  final FocusNode _emailFocusNode = FocusNode();
+  Timer? _emailDebounce;
+  int _emailValidationRequestId = 0;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   final TextEditingController _nameController = TextEditingController();
@@ -20,9 +26,25 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmController = TextEditingController();
   bool _loading = false;
+  bool _emailChecking = false;
+  bool _emailExists = false;
+  bool _emailFormatValid = false;
+  bool _emailTouched = false;
+  String? _emailStatusText;
+  Color? _emailStatusColor;
+  String _lastValidatedEmail = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _emailFocusNode.addListener(_handleEmailFocusChanged);
+  }
 
   @override
   void dispose() {
+    _emailDebounce?.cancel();
+    _emailFocusNode.removeListener(_handleEmailFocusChanged);
+    _emailFocusNode.dispose();
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
@@ -79,7 +101,31 @@ class _RegisterPageState extends State<RegisterPage> {
                     desiredWidth,
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
+                    focusNode: _emailFocusNode,
                     validator: _emailValidator,
+                    onChanged: _handleEmailChanged,
+                    autovalidateMode: AutovalidateMode.disabled,
+                    suffixIcon: _emailChecking
+                        ? const SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: Padding(
+                              padding: EdgeInsets.all(2),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          )
+                        : _emailFormatValid && !_emailExists
+                        ? const Icon(
+                            Icons.check_circle,
+                            color: Colors.green,
+                            size: 20,
+                          )
+                        : null,
+                    belowText: _emailStatusText,
+                    belowTextColor: _emailStatusColor,
                   ),
                   const SizedBox(height: 20),
                   _buildTextField(
@@ -131,7 +177,11 @@ class _RegisterPageState extends State<RegisterPage> {
                   SizedBox(
                     width: MediaQuery.of(context).size.width * 0.4,
                     child: ElevatedButton(
-                      onPressed: _loading
+                      onPressed:
+                          (_loading ||
+                              _emailChecking ||
+                              !_emailFormatValid ||
+                              _emailExists)
                           ? null
                           : () async {
                               final form = _formKey.currentState;
@@ -279,28 +329,56 @@ class _RegisterPageState extends State<RegisterPage> {
     double width, {
     TextEditingController? controller,
     TextInputType? keyboardType,
+    FocusNode? focusNode,
     String? Function(String?)? validator,
+    ValueChanged<String>? onChanged,
+    Widget? suffixIcon,
+    String? belowText,
+    Color? belowTextColor,
+    AutovalidateMode autovalidateMode = AutovalidateMode.onUserInteraction,
   }) {
-    return Container(
-      width: width, // 3. Usar el ancho pasado
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
-      ),
-      child: TextFormField(
-        controller: controller,
-        keyboardType: keyboardType,
-        validator: validator,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
-        decoration: InputDecoration(
-          border: InputBorder.none,
-          hintText: hint,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 25,
-            vertical: 18,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: width,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(30),
+          ),
+          child: TextFormField(
+            controller: controller,
+            focusNode: focusNode,
+            keyboardType: keyboardType,
+            validator: validator,
+            onChanged: onChanged,
+            autovalidateMode: autovalidateMode,
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              hintText: hint,
+              suffixIcon: suffixIcon,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 25,
+                vertical: 18,
+              ),
+            ),
           ),
         ),
-      ),
+        if (belowText != null) ...[
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.only(left: 18),
+            child: Text(
+              belowText,
+              style: TextStyle(
+                color: belowTextColor ?? Colors.redAccent,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -346,6 +424,120 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
+  void _handleEmailChanged(String value) {
+    _emailDebounce?.cancel();
+    final email = _emailController.text.trim();
+
+    if (email.isEmpty) {
+      _emailValidationRequestId++;
+      if (!mounted) return;
+      setState(() {
+        _emailFormatValid = false;
+        _emailChecking = false;
+        _emailExists = false;
+        _emailStatusText = null;
+        _emailStatusColor = null;
+        _lastValidatedEmail = '';
+      });
+      return;
+    }
+
+    if (!_emailRegex.hasMatch(email)) {
+      _emailValidationRequestId++;
+      if (!mounted) return;
+      setState(() {
+        _emailFormatValid = false;
+        _emailChecking = false;
+        _emailExists = false;
+        _emailStatusText = 'Ingresa un correo válido';
+        _emailStatusColor = Colors.redAccent;
+      });
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _emailFormatValid = true;
+      _emailStatusText = 'Validando correo...';
+      _emailStatusColor = Colors.blueGrey;
+    });
+
+    _emailDebounce = Timer(const Duration(milliseconds: 500), () {
+      _validateEmailAvailability(force: false);
+    });
+  }
+
+  void _handleEmailFocusChanged() {
+    if (!_emailFocusNode.hasFocus) {
+      setState(() {
+        _emailTouched = true;
+      });
+      _emailDebounce?.cancel();
+      _validateEmailAvailability(force: true);
+    }
+  }
+
+  Future<void> _validateEmailAvailability({required bool force}) async {
+    final email = _emailController.text.trim();
+    if (!_emailRegex.hasMatch(email)) {
+      return;
+    }
+
+    if (!force && email == _lastValidatedEmail && !_emailChecking) {
+      return;
+    }
+
+    final requestId = ++_emailValidationRequestId;
+    if (mounted) {
+      setState(() {
+        _emailChecking = true;
+        _emailExists = false;
+        _emailStatusText = 'Validando correo...';
+        _emailStatusColor = Colors.blueGrey;
+      });
+    }
+
+    try {
+      final repo = Provider.of<AuthRepository>(context, listen: false);
+      final res = await repo.checkEmail(email);
+      if (!mounted || requestId != _emailValidationRequestId) return;
+      final exists = res['exists'] == true || res['available'] == false;
+      setState(() {
+        _lastValidatedEmail = email;
+        _emailChecking = false;
+        _emailExists = exists;
+        _emailStatusText = exists
+            ? 'correo ya registrado'
+            : 'Correo disponible';
+        _emailStatusColor = exists ? Colors.redAccent : Colors.greenAccent;
+      });
+    } on ApiException catch (e) {
+      if (!mounted || requestId != _emailValidationRequestId) return;
+      if (e.statusCode == 409) {
+        setState(() {
+          _lastValidatedEmail = email;
+          _emailChecking = false;
+          _emailExists = true;
+          _emailStatusText = 'correo ya registrado';
+          _emailStatusColor = Colors.redAccent;
+        });
+        return;
+      }
+      setState(() {
+        _emailChecking = false;
+        _emailStatusText = 'No se pudo validar el correo';
+        _emailStatusColor = Colors.redAccent;
+      });
+    } catch (_) {
+      if (!mounted || requestId != _emailValidationRequestId) return;
+      setState(() {
+        _emailChecking = false;
+        _emailStatusText = 'No se pudo validar el correo';
+        _emailStatusColor = Colors.redAccent;
+      });
+    }
+  }
+
   String? Function(String?) _requiredValidator(String message) {
     return (value) {
       if (value == null || value.trim().isEmpty) {
@@ -360,10 +552,11 @@ class _RegisterPageState extends State<RegisterPage> {
     if (text.isEmpty) {
       return 'Ingresa tu correo';
     }
-    final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
-    if (!emailRegex.hasMatch(text)) {
+    // Solo validar formato después de que el usuario interactúe o pierda foco
+    if (_emailTouched && !_emailRegex.hasMatch(text)) {
       return 'Ingresa un correo válido';
     }
+    // No retornar mensajes de status aquí, se muestran en belowText
     return null;
   }
 

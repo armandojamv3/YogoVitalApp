@@ -25,12 +25,74 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _loading = false;
+  String? _errorField; // Tracks which field has an error ('email' or 'password')
+  String? _errorMessage; // The error message to display
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  /// Builds a text field with error styling if it's the failed field
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required String fieldName,
+    required bool isPasswordField,
+  }) {
+    final isErrorField = _errorField == fieldName;
+    final borderColor = isErrorField ? Colors.red : Colors.white;
+
+    return Container(
+      width: MediaQuery.of(context).size.width * 0.4,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(
+          color: borderColor,
+          width: isErrorField ? 2.0 : 0.0,
+        ),
+      ),
+      child: TextField(
+        controller: controller,
+        keyboardType: fieldName == 'email'
+            ? TextInputType.emailAddress
+            : TextInputType.text,
+        obscureText: isPasswordField ? _obscurePassword : false,
+        decoration: InputDecoration(
+          border: InputBorder.none,
+          hintText: label,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 25,
+            vertical: 18,
+          ),
+          suffixIcon: isPasswordField
+              ? IconButton(
+                  icon: Icon(
+                    _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                    color: Colors.grey,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _obscurePassword = !_obscurePassword;
+                    });
+                  },
+                )
+              : null,
+        ),
+        onChanged: (_) {
+          // Clear error when user starts typing
+          if (_errorField == fieldName) {
+            setState(() {
+              _errorField = null;
+              _errorMessage = null;
+            });
+          }
+        },
+      ),
+    );
   }
 
   @override
@@ -82,81 +144,37 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 40), //Espacio vertical de 40 píxeles
                 // Campo Correo electrónico
-                Container(
-                  width:
-                      MediaQuery.of(context).size.width *
-                      0.4, // Ancho = 100% del ancho de la pantalla
-                  // Contenedor para el campo de texto
-                  decoration: BoxDecoration(
-                    //Decoración del contenedor
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(
-                      30,
-                    ), // Bordes redondeados con radio de 30
-                  ),
-                  child: TextField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      //Decoración del campo de texto
-                      border: InputBorder.none, // Sin borde
-                      hintText: 'Correo electrónico',
-                      contentPadding: EdgeInsets.symmetric(
-                        // Espaciado interno
-                        horizontal: 25, // Espacio horizontal de 25 píxeles
-                        vertical: 18, // Espacio vertical de 18 píxeles
-                      ),
-                    ),
-                  ),
+                _buildTextField(
+                  controller: _emailController,
+                  label: 'Correo electrónico',
+                  fieldName: 'email',
+                  isPasswordField: false,
                 ),
 
                 const SizedBox(height: 20),
 
                 // Campo Contraseña
-                Container(
-                  width:
-                      MediaQuery.of(context).size.width *
-                      0.4, // Ancho = 100% del ancho de la pantalla
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  child: TextField(
-                    controller: _passwordController,
-                    obscureText:
-                        _obscurePassword, // Oculta el texto si _obscurePassword es true
-                    decoration: InputDecoration(
-                      //Decoración del campo de texto
-                      border: InputBorder.none, // Sin borde
-                      hintText: 'Contraseña', // Texto de sugerencia
-                      contentPadding: const EdgeInsets.symmetric(
-                        // Espaciado interno
-                        horizontal: 25,
-                        vertical: 18,
+                _buildTextField(
+                  controller: _passwordController,
+                  label: 'Contraseña',
+                  fieldName: 'password',
+                  isPasswordField: true,
+                ),
+
+                // Error message
+                if (_errorMessage != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text(
+                      _errorMessage!,
+                      style: const TextStyle(
+                        color: Colors.red,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
                       ),
-                      suffixIcon: IconButton(
-                        // Icono al final del campo de texto
-                        icon: Icon(
-                          // Icono que cambia según el estado de
-                          _obscurePassword
-                              ? Icons
-                                    .visibility_off //👁️‍🗨️ (cerrado)
-                              : Icons
-                                    .visibility, // Cambia el icono según el estado 👁️ (abierto)
-                          color: Colors.grey, // Color gris para el icono
-                        ),
-                        onPressed: () {
-                          //Cuando se presiona el botón se ejecuta esta función
-                          setState(() {
-                            //  Le dice a Flutter: "¡Actualiza la pantalla!"
-                            _obscurePassword =
-                                !_obscurePassword; // Cambia el valor de _obscurePassword (true a false o viceversa)
-                          });
-                        },
-                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
-                ),
 
                 const SizedBox(height: 40), //Espacio vertical de 40 píxeles
                 // Botón Iniciar sesión
@@ -216,25 +234,21 @@ class _LoginPageState extends State<LoginPage> {
                             } catch (e) {
                               if (!context.mounted) return;
                               if (e is ApiException) {
+                                // Extract field and error message from response
+                                final field = 
+                                    e.body['field'] as String?;
                                 final msg =
-                                    (e.body['message'] ??
-                                            e.body['error'] ??
+                                    (e.body['error'] ??
                                             'Error de autenticación')
                                         .toString();
-                                showDialog(
-                                  context: context,
-                                  builder: (dialogContext) => AlertDialog(
-                                    title: const Text('Error'),
-                                    content: Text(msg),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () =>
-                                            Navigator.pop(dialogContext),
-                                        child: const Text('OK'),
-                                      ),
-                                    ],
-                                  ),
-                                );
+                                setState(() {
+                                  _errorField = field;
+                                  _errorMessage = msg;
+                                  // Clear password field on auth failure
+                                  if (field == 'password') {
+                                    _passwordController.clear();
+                                  }
+                                });
                               } else {
                                 showDialog(
                                   context: context,

@@ -9,6 +9,19 @@ import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
 import 'package:http/http.dart' as http;
 
+/// Custom exception for login errors
+/// Includes which field failed (email or password) and the HTTP status code
+class LoginException implements Exception {
+  final String message;
+  final String field; // 'email' or 'password'
+  final int statusCode; // 401, 403, 404
+
+  LoginException(this.message, this.field, this.statusCode);
+
+  @override
+  String toString() => message;
+}
+
 class AuthService {
   final PostgreSQLConnection connection;
 
@@ -20,6 +33,8 @@ class AuthService {
     String password,
     String name,
   ) async {
+    var verificationEmailSent = false;
+
     // 1) Primero revisa si ya existe un usuario confirmado en la tabla final.
     final existsUser = await connection.query(
       'SELECT id_usuario FROM public.usuario WHERE correo = @correo',
@@ -81,6 +96,7 @@ class AuthService {
     // 4) Intenta enviar el correo de verificación; si falla, el flujo no se rompe.
     try {
       await _sendVerificationEmail(email, token);
+      verificationEmailSent = true;
     } catch (e) {
       print('Warning: failed to send verification email: $e');
     }
@@ -91,6 +107,7 @@ class AuthService {
       base['verification_token'] = token;
       base['verification_expires_at'] = expiresAt.toIso8601String();
     }
+    base['verification_email_sent'] = verificationEmailSent;
     return base;
   }
 
@@ -682,7 +699,7 @@ class AuthService {
       'SELECT id_usuario, password_hash, nombre, email_verified FROM public.usuario WHERE correo = @correo',
       substitutionValues: {'correo': email},
     );
-    if (res.isEmpty) throw Exception('Invalid credentials');
+    if (res.isEmpty) throw LoginException('User not found', 'email', 404);
     final row = res.first;
     final id = row[0].toString();
     final passwordHash = row[1] as String;
@@ -690,8 +707,8 @@ class AuthService {
     final emailVerified = row[3] as bool;
 
     final ok = BCrypt.checkpw(password, passwordHash);
-    if (!ok) throw Exception('Invalid credentials');
-    if (!emailVerified) throw Exception('Email not verified');
+    if (!ok) throw LoginException('Invalid password', 'password', 401);
+    if (!emailVerified) throw LoginException('Email not verified', 'email', 403);
     // Read JWT secret from environment or fallback to a local `.env` file.
     String? secret = Platform.environment['JWT_SECRET'];
     if (secret == null) {
