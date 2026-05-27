@@ -12,6 +12,7 @@ import '../routes/auth/verify.dart' as auth_verify;
 import '../routes/auth/resend_verification.dart' as auth_resend_verification;
 import '../routes/auth/register.dart' as auth_register;
 import '../routes/auth/password_reset_confirm.dart' as auth_password_reset_confirm;
+import '../routes/auth/logout.dart' as auth_logout;
 import '../routes/auth/login.dart' as auth_login;
 import '../routes/auth/check-email.dart' as auth_check_email;
 import '../routes/auth/password_reset/index.dart' as auth_password_reset_index;
@@ -49,7 +50,7 @@ Handler buildAuthPasswordResetHandler() {
 Handler buildAuthHandler() {
   final pipeline = const Pipeline();
   final router = Router()
-    ..all('/verify', (context) => auth_verify.onRequest(context,))..all('/resend_verification', (context) => auth_resend_verification.onRequest(context,))..all('/register', (context) => auth_register.onRequest(context,))..all('/password_reset_confirm', (context) => auth_password_reset_confirm.onRequest(context,))..all('/login', (context) => auth_login.onRequest(context,))..all('/check-email', (context) => auth_check_email.onRequest(context,));
+    ..all('/verify', (context) => auth_verify.onRequest(context,))..all('/resend_verification', (context) => auth_resend_verification.onRequest(context,))..all('/register', (context) => auth_register.onRequest(context,))..all('/password_reset_confirm', (context) => auth_password_reset_confirm.onRequest(context,))..all('/logout', (context) => auth_logout.onRequest(context,))..all('/login', (context) => auth_login.onRequest(context,))..all('/check-email', (context) => auth_check_email.onRequest(context,));
   return pipeline.addHandler(router);
 }
 

@@ -1,4 +1,10 @@
 import 'package:flutter/material.dart';
+// Usamos Provider para leer servicios y modelos de estado desde el árbol
+import 'package:provider/provider.dart';
+// Repo que maneja autenticación (almacenamiento del JWT, logout)
+import 'package:yogo_vital_app/data/repositories/auth_repository.dart';
+// Modelo de carrito para limpiar el estado al cerrar sesión
+import 'package:yogo_vital_app/core/models/cart_model.dart';
 import 'package:yogo_vital_app/presentation/widgets/custom_bottom_nav_bar.dart';
 
 class AccountPage extends StatelessWidget {
@@ -195,13 +201,35 @@ class AccountPage extends StatelessWidget {
 
                   // Cerrar sesión
                   GestureDetector(
-                    onTap: () {
-                      // Aquí podrías cerrar sesión
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Sesión cerrada (simulada)'),
-                        ),
-                      );
+                    onTap: () async {
+                      // Pasos al cerrar sesión:
+                      // 1) Llamar a `AuthRepository.logout()` para borrar el token local
+                      // 2) Limpiar estados locales como el carrito (`CartModel.clear()`)
+                      // 3) Navegar a la pantalla de login y eliminar el historial
+                      // Todo esto protege datos personales y evita volver atrás con el botón "atrás".
+                      try {
+                        final repo = context.read<AuthRepository>();
+                        // Borra token y datos de sesión en almacenamiento seguro
+                        await repo.logout();
+
+                        // Intentamos limpiar el carrito u otros modelos; si fallan, lo ignoramos
+                        try {
+                          final cart = context.read<CartModel>();
+                          cart.clear();
+                        } catch (_) {}
+
+                        if (!context.mounted) return;
+                        // Navega a login y elimina toda la pila de rutas anteriores
+                        Navigator.pushNamedAndRemoveUntil(
+                            context, '/login', (route) => false);
+                      } catch (e) {
+                        // Mostrar un mensaje amigable si algo sale mal
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error cerrando sesión: $e'),
+                          ),
+                        );
+                      }
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(
