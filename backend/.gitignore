@@ -1,7 +1,0 @@
-# Variables de entorno con secretos — nunca versionar
-*.env
-.env
-.env.*
-
-# Excepción: la plantilla sin secretos sí se versiona
-!.env.example

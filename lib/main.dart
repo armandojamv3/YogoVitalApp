@@ -3,7 +3,6 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:yogo_vital_app/core/models/cart_model.dart';
-import 'package:yogo_vital_app/core/network/api_client.dart';
 import 'package:yogo_vital_app/core/providers/auth_provider.dart';
 import 'package:yogo_vital_app/core/providers/pedido_provider.dart';
 import 'package:yogo_vital_app/data/datasources/auth_remote_datasource.dart';
@@ -20,7 +19,6 @@ import 'package:yogo_vital_app/presentation/pages/admin/admin_frutas_extras_page
 import 'package:yogo_vital_app/core/theme/app_theme.dart';
 import 'package:yogo_vital_app/presentation/pages/admin/admin_dashboard_page.dart';
 import 'package:yogo_vital_app/presentation/pages/admin/pedido_admin_detalle_screen.dart';
-import 'package:yogo_vital_app/presentation/pages/orders/estado_pedido_page.dart';
 import 'package:yogo_vital_app/presentation/pages/orders/estado_pedido_supabase_page.dart';
 import 'package:yogo_vital_app/presentation/pages/orders/resumen_pedido_page.dart';
 import 'package:yogo_vital_app/presentation/pages/orders/direcciones_page.dart';
@@ -44,19 +42,16 @@ void main() async {
 
   final authRemote = AuthRemoteDataSource();
   final authRepo = AuthRepository(remote: authRemote);
-  final apiClient = ApiClient(baseUrl: 'http://10.0.2.2:8080');
 
-  runApp(MyApp(authRepository: authRepo, apiClient: apiClient));
+  runApp(MyApp(authRepository: authRepo));
 }
 
 class MyApp extends StatelessWidget {
   final AuthRepository authRepository;
-  final ApiClient apiClient;
 
   const MyApp({
     super.key,
     required this.authRepository,
-    required this.apiClient,
   });
 
   @override
@@ -67,7 +62,6 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         Provider<AuthRepository>.value(value: authRepository),
-        Provider<ApiClient>.value(value: apiClient),
         ChangeNotifierProvider(create: (_) => AuthProvider(authRepository)),
         ChangeNotifierProvider(create: (_) => CartModel()),
         // Sprint 3+4: PedidoProvider elevado a nivel app para que
@@ -101,11 +95,6 @@ class MyApp extends StatelessWidget {
           '/estado-pedido': (ctx) {
             final id = ModalRoute.of(ctx)!.settings.arguments as String? ?? '';
             return EstadoPedidoSupabasePage(pedidoId: id);
-          },
-          // Ruta legacy (Dart Frog) — mantenida por compatibilidad
-          '/estado-pedido-legacy': (ctx) {
-            final id = ModalRoute.of(ctx)!.settings.arguments as String? ?? '';
-            return EstadoPedidoPage(pedidoId: id);
           },
           '/admin/sabores': (_) => const AdminSaboresPage(),
           '/admin/frutas-extras': (_) => const AdminFrutasExtrasPage(),
