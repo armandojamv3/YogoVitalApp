@@ -1,60 +1,37 @@
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'dart:async';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:yogo_vital_app/data/datasources/auth_remote_datasource.dart';
 
 class AuthRepository {
   final AuthRemoteDataSource remote;
-  final FlutterSecureStorage storage;
-  static const _jwtKey = 'jwt_token';
 
-  AuthRepository({required this.remote, FlutterSecureStorage? storage})
-    : storage = storage ?? const FlutterSecureStorage();
+  AuthRepository({required this.remote});
 
-  Future<Map<String, dynamic>> register(
-    String name,
-    String email,
-    String password, {
-    String? passwordConfirmation,
-  }) async {
-    return remote.register(
-      name: name,
-      email: email,
-      password: password,
-      passwordConfirmation: passwordConfirmation,
-    );
-  }
+  Future<AuthResponse> login(String email, String password) =>
+      remote.signIn(email: email, password: password);
 
-  Future<Map<String, dynamic>> login(String email, String password) async {
-    final res = await remote.login(email: email, password: password);
-    final token = res['token'] as String?;
-    if (token != null) {
-      await storage.write(key: _jwtKey, value: token);
-    }
-    return res;
-  }
-
-  Future<Map<String, dynamic>> resendVerification(String email) async {
-    return remote.resendVerification(email: email);
-  }
-
-  Future<Map<String, dynamic>> requestPasswordReset(String email) async {
-    return remote.requestPasswordReset(email: email);
-  }
-
-  Future<Map<String, dynamic>> confirmPasswordReset({
-    required String token,
+  Future<AuthResponse> register({
+    required String name,
+    required String email,
+    required String phone,
     required String password,
-    String? passwordConfirmation,
-  }) async {
-    return remote.confirmPasswordReset(
-      token: token,
-      password: password,
-      passwordConfirmation: passwordConfirmation,
-    );
-  }
+  }) =>
+      remote.signUp(name: name, email: email, phone: phone, password: password);
 
-  Future<void> logout() async {
-    await storage.delete(key: _jwtKey);
-  }
+  Future<void> resetPassword(String email) =>
+      remote.resetPasswordForEmail(email);
 
-  Future<String?> getToken() async => await storage.read(key: _jwtKey);
+  Future<void> logout() => remote.signOut();
+
+  Future<bool> signInWithGoogle() => remote.signInWithGoogle();
+
+  Future<void> ensureUsuarioExists(User user) =>
+      remote.ensureUsuarioExists(user);
+
+  User? get currentUser => remote.currentUser;
+
+  Stream<AuthState> get onAuthStateChange => remote.onAuthStateChange;
+
+  Future<bool> isEmailRegistered(String email) =>
+      remote.isEmailRegistered(email);
 }

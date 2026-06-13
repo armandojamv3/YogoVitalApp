@@ -17,6 +17,6 @@ services:
       PGADMIN_DEFAULT_EMAIL: admin@local
       PGADMIN_DEFAULT_PASSWORD: admin
     ports:
-      - "8080:80"
-volumes:  
+      - "8081:80"
+volumes:
   db_data:

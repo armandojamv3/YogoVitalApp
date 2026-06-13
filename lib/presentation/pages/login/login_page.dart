@@ -1,30 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:yogo_vital_app/core/theme/app_theme.dart';
 import 'package:yogo_vital_app/data/repositories/auth_repository.dart';
-import 'package:yogo_vital_app/core/network/api_client.dart';
+import 'package:yogo_vital_app/presentation/widgets/auth/auth_text_field.dart';
+import 'package:yogo_vital_app/presentation/widgets/auth/primary_button.dart';
 
-//Esta clase HEREDA de StatefulWidget (puede cambiar)
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
-  //Es como decir: Voy a crear un tipo de widget nuevo
-  //llamado LoginPage que puede cambiar con el tiempo
 
-  // dato generico, este metodo  retorna tipo LoginPage la cual se llamara
-  //createState y  este va a crear un  _LoginPageState osea se crea una instancia
-  // La clase privada (el _ significa privada) que contiene la lógica
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
 
-//extends State<LoginPage>` → Maneja el estado de LoginPage
 class _LoginPageState extends State<LoginPage> {
-  // _obscurePassword` = nombre de la variable (privada por el `_`)
-  // `bool` = tipo de dato (booleano: true o false)
-  bool _obscurePassword =
-      true; // Variable para ocultar/mostrar contraseña,comienza siendo verdadero
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  bool _obscurePassword = true;
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _loading = false;
+
+  // HU_03: botón activo solo cuando ambos campos tienen contenido y no hay request en curso
+  bool get _canSubmit =>
+      _emailController.text.trim().isNotEmpty &&
+      _passwordController.text.isNotEmpty &&
+      !_loading;
 
   @override
   void dispose() {
@@ -33,328 +33,184 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
+  Future<void> _login() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(email)) {
+      _showError('Formato de correo electrónico inválido');
+      return;
+    }
+
+    setState(() => _loading = true);
+    try {
+      final repo = context.read<AuthRepository>();
+      await repo.login(email, password);
+      if (!mounted) return;
+      // HU_03: navegar a home en caso de éxito
+      Navigator.pushReplacementNamed(context, '/home');
+    } on AuthException catch (e) {
+      debugPrint('LOGIN AuthException: message="${e.message}" statusCode=${e.statusCode}');
+      if (!mounted) return;
+      // HU_04: mensaje genérico — no revelar qué campo falló
+      _showError('Correo o contraseña incorrectos');
+    } catch (e) {
+      debugPrint('LOGIN Error: $e');
+      if (!mounted) return;
+      _showError('Error de conexión. Intenta de nuevo.');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  // HU_04: SnackBar rojo flotante con mensaje de error
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
   @override
-  // build Método que construye la interfaz de usuario
-  // BuildContext context  Información sobre dónde está este widget en el árbol
   Widget build(BuildContext context) {
-    //Devuelve un Scaffold (estructura base de pantalla)
     return Scaffold(
+      // Evita que el teclado desplace el fondo
+      resizeToAvoidBottomInset: true,
       body: Container(
-        // Contenedor principal,Una caja que contiene otros widgets
-        width: double.infinity, //Ancho = 100% de la pantalla
-        height: double.infinity, //Alto = 100% de la pantalla
-        //decoration: Esta es una propiedad de un widget como Container o DecoratedBox
+        width: double.infinity,
+        height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              Color(0xFF5B9EF5),
-              Color(0xFF4A8FE7),
-            ], //Define los colores inicial y final del degradado
-            begin: Alignment
-                .topCenter, // Punto de inicio del degradado (centro superior)
-            end: Alignment
-                .bottomCenter, // Punto final del degradado (centro inferior)
+            colors: [AppColors.gradientTop, AppColors.gradientBottom],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
         ),
         child: SafeArea(
-          //SafeArea evita que el contenido se dibuje debajo de la barra de estado(hora, batería, etc.) y el notch la muesca en algunos dispositivos
           child: SingleChildScrollView(
-            //Permite desplazamiento si el contenido es más grande que la pantalla
-            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-            // permite hacer scroll si el  contenido es más grande que la pantalla y padding es el espacio interno y lo otro es el espacio vertical y horizontal
+            // 24px lateral constante → campos al ~88–90% del ancho
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
             child: Column(
-              //Organiza los widgets en una columna (de arriba hacia abajo)
-              crossAxisAlignment: CrossAxisAlignment
-                  .center, // centra horizontalmente todos los hijos de la columna
+              // stretch: los widgets heredan el ancho del Column (sin fixed width)
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Logo
-                Image.asset('assets/images/logo.png', height: 150), //
-                const SizedBox(height: 30), //Espacio vertical de 30 píxeles
-                // Título
-                const Text(
-                  'Inicio de Sessión',
-                  style: TextStyle(
-                    fontSize: 28, //Tamaño de la fuente
-                    fontWeight: FontWeight.bold, //Negrita
-                    color: Colors.white, //Color blanco
-                  ),
+                // ── Logo ──────────────────────────────────────────────────
+                Align(
+                  alignment: Alignment.center,
+                  child: Image.asset('assets/images/logo.png', height: 140),
                 ),
+                const SizedBox(height: 28),
 
-                const SizedBox(height: 40), //Espacio vertical de 40 píxeles
-                // Campo Correo electrónico
-                Container(
-                  width:
-                      MediaQuery.of(context).size.width *
-                      0.4, // Ancho = 100% del ancho de la pantalla
-                  // Contenedor para el campo de texto
-                  decoration: BoxDecoration(
-                    //Decoración del contenedor
+                // ── Título ────────────────────────────────────────────────
+                Text(
+                  'Inicio de Sesión',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(
-                      30,
-                    ), // Bordes redondeados con radio de 30
-                  ),
-                  child: TextField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      //Decoración del campo de texto
-                      border: InputBorder.none, // Sin borde
-                      hintText: 'Correo electrónico',
-                      contentPadding: EdgeInsets.symmetric(
-                        // Espaciado interno
-                        horizontal: 25, // Espacio horizontal de 25 píxeles
-                        vertical: 18, // Espacio vertical de 18 píxeles
-                      ),
-                    ),
+                    height: 1.2,
                   ),
                 ),
+                const SizedBox(height: 36),
 
-                const SizedBox(height: 20),
-
-                // Campo Contraseña
-                Container(
-                  width:
-                      MediaQuery.of(context).size.width *
-                      0.4, // Ancho = 100% del ancho de la pantalla
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  child: TextField(
-                    controller: _passwordController,
-                    obscureText:
-                        _obscurePassword, // Oculta el texto si _obscurePassword es true
-                    decoration: InputDecoration(
-                      //Decoración del campo de texto
-                      border: InputBorder.none, // Sin borde
-                      hintText: 'Contraseña', // Texto de sugerencia
-                      contentPadding: const EdgeInsets.symmetric(
-                        // Espaciado interno
-                        horizontal: 25,
-                        vertical: 18,
-                      ),
-                      suffixIcon: IconButton(
-                        // Icono al final del campo de texto
-                        icon: Icon(
-                          // Icono que cambia según el estado de
-                          _obscurePassword
-                              ? Icons
-                                    .visibility_off //👁️‍🗨️ (cerrado)
-                              : Icons
-                                    .visibility, // Cambia el icono según el estado 👁️ (abierto)
-                          color: Colors.grey, // Color gris para el icono
-                        ),
-                        onPressed: () {
-                          //Cuando se presiona el botón se ejecuta esta función
-                          setState(() {
-                            //  Le dice a Flutter: "¡Actualiza la pantalla!"
-                            _obscurePassword =
-                                !_obscurePassword; // Cambia el valor de _obscurePassword (true a false o viceversa)
-                          });
-                        },
-                      ),
-                    ),
-                  ),
+                // ── Campo: correo ─────────────────────────────────────────
+                AuthTextField(
+                  controller: _emailController,
+                  hintText: 'Correo electrónico',
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  prefixIcon: const Icon(Icons.email_outlined),
+                  // Rebuild para activar/desactivar el botón conforme el usuario escribe
+                  onChanged: (_) => setState(() {}),
                 ),
+                const SizedBox(height: 16),
 
-                const SizedBox(height: 40), //Espacio vertical de 40 píxeles
-                // Botón Iniciar sesión
-                SizedBox(
-                  // Contenedor para el botón inicio sesion
-                  width:
-                      MediaQuery.of(context).size.width *
-                      0.4, // Ancho = 40% del ancho de la pantalla
-                  child: ElevatedButton(
-                    onPressed: _loading
-                        ? null
-                        : () async {
-                            final repo = Provider.of<AuthRepository>(
-                              context,
-                              listen: false,
-                            );
-                            final email = _emailController.text.trim();
-                            final password = _passwordController.text;
-                            if (email.isEmpty || password.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Ingresa correo y contraseña'),
-                                ),
-                              );
-                              return;
-                            }
-                            setState(() => _loading = true);
-                            try {
-                              final res = await repo.login(email, password);
-                              // `AuthRepository.login` guarda el token si existe.
-                              final token = res['token'] as String?;
-                              if (!context.mounted) return;
-                              if (token != null && token.isNotEmpty) {
-                                Navigator.pushReplacementNamed(
-                                  context,
-                                  '/home',
-                                );
-                              } else {
-                                final msg =
-                                    (res['message'] ?? 'Error desconocido')
-                                        .toString();
-                                showDialog(
-                                  context: context,
-                                  builder: (dialogContext) => AlertDialog(
-                                    title: const Text('Error'),
-                                    content: Text(msg),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () =>
-                                            Navigator.pop(dialogContext),
-                                        child: const Text('OK'),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }
-                            } catch (e) {
-                              if (!context.mounted) return;
-                              if (e is ApiException) {
-                                final msg =
-                                    (e.body['message'] ??
-                                            e.body['error'] ??
-                                            'Error de autenticación')
-                                        .toString();
-                                showDialog(
-                                  context: context,
-                                  builder: (dialogContext) => AlertDialog(
-                                    title: const Text('Error'),
-                                    content: Text(msg),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () =>
-                                            Navigator.pop(dialogContext),
-                                        child: const Text('OK'),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              } else {
-                                showDialog(
-                                  context: context,
-                                  builder: (dialogContext) => AlertDialog(
-                                    title: const Text('Error'),
-                                    content: Text(e.toString()),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () =>
-                                            Navigator.pop(dialogContext),
-                                        child: const Text('OK'),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }
-                            } finally {
-                              if (mounted) {
-                                setState(() => _loading = false);
-                              }
-                            }
-                          },
-                    style: ElevatedButton.styleFrom(
-                      // Estilo del botón
-                      backgroundColor: const Color(0xFF0D47A1),
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 16,
-                      ), // Espaciado interno vertical de 16 píxeles
-                      shape: RoundedRectangleBorder(
-                        // Forma del botón
-                        borderRadius: BorderRadius.circular(
-                          30,
-                        ), // Bordes redondeados con radio de 30
-                      ),
+                // ── Campo: contraseña ─────────────────────────────────────
+                AuthTextField(
+                  controller: _passwordController,
+                  hintText: 'Contraseña',
+                  obscureText: _obscurePassword,
+                  textInputAction: TextInputAction.done,
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      color: AppColors.inputIcon,
+                      size: 22,
                     ),
-
-                    child: _loading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Text(
-                            // Texto del botón
-                            'Iniciar sesión',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
+                    onPressed: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
                   ),
+                  onChanged: (_) => setState(() {}),
                 ),
+                const SizedBox(height: 32),
 
-                const SizedBox(height: 30),
+                // ── Botón primario ────────────────────────────────────────
+                PrimaryButton(
+                  label: 'Iniciar sesión',
+                  onPressed: _canSubmit ? _login : null,
+                  isLoading: _loading,
+                ),
+                const SizedBox(height: 24),
+
+                // ── Link: recuperar contraseña ────────────────────────────
                 TextButton(
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/recover');
-                  },
-                  child: const Text(
+                  onPressed: () => Navigator.pushNamed(context, '/recover'),
+                  child: Text(
                     '¿Olvidaste tu contraseña?',
-                    style: TextStyle(color: Colors.white, fontSize: 14),
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.white.withValues(alpha: 0.9),
+                    ),
                   ),
                 ),
+                const SizedBox(height: 4),
 
-                const SizedBox(height: 20), //Espacio vertical de 20 píxeles
-                // Texto "¿No tienes cuenta? Regístrate aquí"
+                // ── Link: registrarse ─────────────────────────────────────
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
+                    Text(
                       '¿No tienes cuenta? ',
-                      style: TextStyle(color: Colors.white),
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.white.withValues(alpha: 0.9),
+                      ),
                     ),
                     GestureDetector(
-                      onTap: () {
-                        Navigator.pushNamed(context, '/register');
-                      },
-                      child: const Text(
+                      onTap: () => Navigator.pushNamed(context, '/register'),
+                      child: Text(
                         'Regístrate aquí',
-                        style: TextStyle(
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
                           color: Colors.white,
-                          fontWeight: FontWeight.bold,
                           decoration: TextDecoration.underline,
+                          decorationColor: Colors.white,
                         ),
                       ),
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 30),
-
-                // Botón Google
-                Container(
-                  width:
-                      MediaQuery.of(context).size.width *
-                      0.4, // Ancho = 40% del ancho de la pantalla
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.login, color: Colors.red),
-                      SizedBox(width: 10),
-                      Text(
-                        'Inicio de sessión con Google',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                const SizedBox(height: 16),
               ],
             ),
           ),

@@ -1,59 +1,82 @@
-import 'package:yogo_vital_app/core/network/api_client.dart';
+import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthRemoteDataSource {
-  final ApiClient apiClient;
+  SupabaseClient get _client => Supabase.instance.client;
 
-  AuthRemoteDataSource({required this.apiClient});
+  Future<AuthResponse> signIn({
+    required String email,
+    required String password,
+  }) =>
+      _client.auth.signInWithPassword(email: email, password: password);
 
-  /// Register user. Returns server response map.
-  Future<Map<String, dynamic>> register({
+  Future<AuthResponse> signUp({
     required String name,
     required String email,
+    required String phone,
     required String password,
-    String? passwordConfirmation,
-  }) async {
-    final body = {'name': name, 'email': email, 'password': password};
-    if (passwordConfirmation != null) {
-      body['password_confirmation'] = passwordConfirmation;
+  }) =>
+      _client.auth.signUp(
+        email: email,
+        password: password,
+        data: {'nombre': name, 'telefono': phone},
+      );
+
+  Future<void> resetPasswordForEmail(String email) =>
+      _client.auth.resetPasswordForEmail(email);
+
+  Future<void> signOut() => _client.auth.signOut();
+
+  Future<bool> signInWithGoogle() => _client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo:
+            kIsWeb ? null : 'io.supabase.yogovital://login-callback',
+      );
+
+  Future<void> ensureUsuarioExists(User user) async {
+    final existing = await _client
+        .from('usuarios')
+        .select('id, nombre')
+        .eq('id', user.id)
+        .maybeSingle();
+
+    if (existing == null) {
+      final nombre = user.userMetadata?['full_name'] as String? ??
+          user.userMetadata?['name'] as String? ??
+          '';
+      await _client.from('usuarios').insert({
+        'id': user.id,
+        'nombre': nombre,
+        'correo': user.email ?? '',
+        'rol': 'cliente',
+      });
+    } else if ((existing['nombre'] as String?)?.isEmpty ?? true) {
+      // Row created by trigger but nombre came empty (Google doesn't set 'nombre')
+      final nombre = user.userMetadata?['full_name'] as String? ??
+          user.userMetadata?['name'] as String? ??
+          '';
+      if (nombre.isNotEmpty) {
+        await _client
+            .from('usuarios')
+            .update({'nombre': nombre})
+            .eq('id', user.id);
+      }
     }
-    return apiClient.post('/auth/register', body);
   }
 
-  Future<Map<String, dynamic>> login({
-    required String email,
-    required String password,
-  }) async {
-    return apiClient.post('/auth/login', {
-      'email': email,
-      'password': password,
-    });
-  }
+  User? get currentUser => _client.auth.currentUser;
 
-  Future<Map<String, dynamic>> resendVerification({
-    required String email,
-  }) async {
-    return apiClient.post('/auth/resend_verification', {'email': email});
-  }
+  Stream<AuthState> get onAuthStateChange => _client.auth.onAuthStateChange;
 
-  Future<Map<String, dynamic>> requestPasswordReset({
-    required String email,
-  }) async {
-    return apiClient.post('/auth/password_reset', {'email': email});
-  }
-
-  Future<Map<String, dynamic>> confirmPasswordReset({
-    required String token,
-    required String password,
-    String? passwordConfirmation,
-  }) async {
-    final body = {'token': token, 'password': password};
-    if (passwordConfirmation != null) {
-      body['password_confirmation'] = passwordConfirmation;
+  /// Queries the 'usuarios' table via RPC to check if the email is taken.
+  /// Requires the SQL function 'check_email_exists' to exist in Supabase.
+  Future<bool> isEmailRegistered(String email) async {
+    try {
+      final result = await _client
+          .rpc('check_email_exists', params: {'email_to_check': email});
+      return result as bool? ?? false;
+    } catch (_) {
+      return false;
     }
-    return apiClient.post('/auth/password_reset/confirm', body);
-  }
-
-  Future<Map<String, dynamic>> verify({required String token}) async {
-    return apiClient.get('/auth/verify?token=$token');
   }
 }

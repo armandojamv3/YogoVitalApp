@@ -8,6 +8,7 @@ class CartItem {
   final String size;
   int qty;
   bool checked;
+  final String tipo; // 'personalizado' o 'tradicional'
 
   CartItem({
     required this.id,
@@ -17,6 +18,7 @@ class CartItem {
     required this.size,
     this.qty = 1,
     this.checked = true,
+    this.tipo = 'personalizado',
   });
 }
 

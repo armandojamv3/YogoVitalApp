@@ -1,7 +1,9 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:yogo_vital_app/presentation/widgets/custom_bottom_nav_bar.dart';
 import 'package:yogo_vital_app/core/models/cart_model.dart';
+import 'package:yogo_vital_app/presentation/pages/cart/cart_checkout_page.dart';
+import 'package:yogo_vital_app/presentation/widgets/custom_bottom_nav_bar.dart';
 
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
@@ -16,268 +18,333 @@ class _CartPageState extends State<CartPage> {
     final cart = context.watch<CartModel>();
     final items = cart.items;
     final subtotal = cart.subtotal;
+    debugPrint('[CartPage] build: items=${items.length} subtotal=$subtotal');
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F2F4),
-      body: SafeArea(
-        child: Column(
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF5B9EF5),
+        elevation: 4,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Row(
           children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF5B9EF5),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 4,
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: const Icon(Icons.arrow_back, color: Colors.white),
-                  ),
-                  const SizedBox(width: 12),
-                  Image.asset('assets/images/logo.png', height: 36),
-                ],
+            Image.asset(
+              'assets/images/logo.png',
+              height: 36,
+              errorBuilder: (_, __, ___) => const SizedBox(width: 36),
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Mi Carrito',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
               ),
             ),
-
-            const SizedBox(height: 12),
-
-            // White rounded card with items
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  children: [
-                    ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: items.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
-                      itemBuilder: (context, index) {
-                        final it = items[index];
-                        return Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            // checkbox
-                            GestureDetector(
-                              onTap: () => cart.toggleChecked(it.id, it.size),
-                              child: Container(
-                                width: 28,
-                                height: 28,
-                                decoration: BoxDecoration(
-                                  color: it.checked
-                                      ? const Color(0xFF4CAF50)
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: Colors.grey.shade400,
-                                  ),
-                                ),
-                                child: it.checked
-                                    ? const Icon(
-                                        Icons.check,
-                                        color: Colors.white,
-                                        size: 18,
-                                      )
-                                    : null,
-                              ),
-                            ),
-
-                            const SizedBox(width: 12),
-
-                            // image
-                            Container(
-                              width: 70,
-                              height: 70,
-                              decoration: BoxDecoration(
-                                color: Colors.grey[200],
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(6),
-                                  child: Image.asset(
-                                    it.image,
-                                    fit: BoxFit.contain,
-                                    errorBuilder: (c, e, s) => const Icon(
-                                      Icons.image,
-                                      size: 36,
-                                      color: Colors.orange,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-
-                            const SizedBox(width: 12),
-
-                            // title + qty controls
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    it.title,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      InkWell(
-                                        onTap: () => cart.updateQty(
-                                          it.id,
-                                          it.size,
-                                          it.qty > 1 ? it.qty - 1 : 1,
-                                        ),
-                                        child: Container(
-                                          width: 28,
-                                          height: 28,
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.circular(
-                                              14,
-                                            ),
-                                            border: Border.all(
-                                              color: Colors.grey.shade400,
-                                            ),
-                                          ),
-                                          child: const Center(
-                                            child: Icon(Icons.remove, size: 18),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 6,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFF0F2F4),
-                                          borderRadius: BorderRadius.circular(
-                                            14,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          '${it.qty}',
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      InkWell(
-                                        onTap: () => cart.updateQty(
-                                          it.id,
-                                          it.size,
-                                          it.qty + 1,
-                                        ),
-                                        child: Container(
-                                          width: 28,
-                                          height: 28,
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.circular(
-                                              14,
-                                            ),
-                                            border: Border.all(
-                                              color: Colors.grey.shade400,
-                                            ),
-                                          ),
-                                          child: const Center(
-                                            child: Icon(Icons.add, size: 18),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            // price
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  'COP ${it.price}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  '${it.price} x ${it.qty}',
-                                  style: const TextStyle(color: Colors.grey),
-                                ),
-                              ],
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const Spacer(),
-
-            // Bottom subtotal + Comprar
-            Container(
-              color: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('SUB TOTAL', style: TextStyle(fontSize: 12)),
-                        Text(
-                          'COP $subtotal',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                  ),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF5B9EF5),
-                    ),
-                    onPressed: () {
-                      // Acción de comprar (navegar a checkout)
-                    },
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 10,
-                      ),
-                      child: Text('Comprar'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Bottom navigation
-            const SizedBox(height: 4),
-            const CustomBottomNavBar(currentIndex: 2),
           ],
         ),
+      ),
+      body: items.isEmpty
+          ? _buildEmptyState(context)
+          : Column(
+              children: [
+                Expanded(child: _buildItemsList(context, cart, items)),
+                _buildSubtotalBar(context, cart, items, subtotal),
+              ],
+            ),
+      bottomNavigationBar: const CustomBottomNavBar(currentIndex: 2),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.shopping_cart_outlined,
+              size: 80,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Tu carrito está vacío',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1A1A2E),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Agrega yogures para comenzar tu pedido',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+            ),
+            const SizedBox(height: 28),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF5B9EF5),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 28,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+              ),
+              icon: const Icon(Icons.local_drink_outlined),
+              label: const Text(
+                'Ver yogures',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              onPressed: () =>
+                  Navigator.of(context).pushNamed('/yogurt'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildItemsList(
+    BuildContext context,
+    CartModel cart,
+    List<CartItem> items,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        padding: const EdgeInsets.all(12),
+        child: ListView.separated(
+          itemCount: items.length,
+          separatorBuilder: (_, __) =>
+              const Divider(height: 16, thickness: 0.5),
+          itemBuilder: (context, index) {
+            final it = items[index];
+            return _CartItemRow(item: it, cart: cart);
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubtotalBar(
+    BuildContext context,
+    CartModel cart,
+    List<CartItem> items,
+    int subtotal,
+  ) {
+    return Container(
+      width: double.infinity,
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('SUB TOTAL', style: TextStyle(fontSize: 12)),
+                Text(
+                  'COP $subtotal',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            width: 130,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF5B9EF5),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              onPressed: () => _confirmOrder(context, cart, subtotal),
+              child: const Text('Comprar'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmOrder(BuildContext context, CartModel cart, int subtotal) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const CartCheckoutPage()),
+    );
+  }
+}
+
+class _CartItemRow extends StatelessWidget {
+  final CartItem item;
+  final CartModel cart;
+
+  const _CartItemRow({required this.item, required this.cart});
+
+  @override
+  Widget build(BuildContext context) {
+    final it = item;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        GestureDetector(
+          onTap: () => cart.toggleChecked(it.id, it.size),
+          child: Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: it.checked ? const Color(0xFF4CAF50) : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade400),
+            ),
+            child: it.checked
+                ? const Icon(Icons.check, color: Colors.white, size: 18)
+                : null,
+          ),
+        ),
+
+        const SizedBox(width: 12),
+
+        Container(
+          width: 70,
+          height: 70,
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: it.image.startsWith('http')
+                  ? CachedNetworkImage(
+                      imageUrl: it.image,
+                      fit: BoxFit.contain,
+                      placeholder: (_, __) => const Icon(
+                        Icons.icecream,
+                        size: 36,
+                        color: Colors.orange,
+                      ),
+                      errorWidget: (_, __, ___) => const Icon(
+                        Icons.icecream,
+                        size: 36,
+                        color: Colors.orange,
+                      ),
+                    )
+                  : Image.asset(
+                      it.image,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.icecream,
+                        size: 36,
+                        color: Colors.orange,
+                      ),
+                    ),
+            ),
+          ),
+        ),
+
+        const SizedBox(width: 12),
+
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                it.title,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  _QtyButton(
+                    icon: Icons.remove,
+                    onTap: () => cart.updateQty(
+                      it.id,
+                      it.size,
+                      it.qty > 1 ? it.qty - 1 : 1,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0F2F4),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Text(
+                      '${it.qty}',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _QtyButton(
+                    icon: Icons.add,
+                    onTap: () => cart.updateQty(it.id, it.size, it.qty + 1),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              'COP ${it.price}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${it.price} x ${it.qty}',
+              style: const TextStyle(color: Colors.grey, fontSize: 12),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _QtyButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _QtyButton({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.grey.shade400),
+        ),
+        child: Center(child: Icon(icon, size: 18)),
       ),
     );
   }

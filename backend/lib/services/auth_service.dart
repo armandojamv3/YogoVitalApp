@@ -647,7 +647,7 @@ class AuthService {
 
   Future<Map<String, dynamic>> login(String email, String password) async {
     final res = await connection.query(
-        'SELECT id, password_hash, name, email_verified FROM public.users WHERE email = @email',
+        'SELECT id, password_hash, name, email_verified, rol FROM public.users WHERE email = @email',
         substitutionValues: {'email': email});
     if (res.isEmpty) throw Exception('Invalid credentials');
     final row = res.first;
@@ -655,6 +655,7 @@ class AuthService {
     final passwordHash = row[1] as String;
     final name = row[2] as String;
     final emailVerified = row[3] as bool;
+    final rol = row[4] as String? ?? 'cliente';
 
     final ok = BCrypt.checkpw(password, passwordHash);
     if (!ok) throw Exception('Invalid credentials');
@@ -684,13 +685,13 @@ class AuthService {
       }
     }
     secret ??= 'secret';
-    final jwt = JWT({'id': id, 'email': email});
+    final jwt = JWT({'id': id, 'email': email, 'rol': rol});
     final token =
         jwt.sign(SecretKey(secret), expiresIn: const Duration(hours: 24));
 
     return {
       'token': token,
-      'user': {'id': id, 'email': email, 'name': name}
+      'user': {'id': id, 'email': email, 'name': name, 'rol': rol}
     };
   }
 }
