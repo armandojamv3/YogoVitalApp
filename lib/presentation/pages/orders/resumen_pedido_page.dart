@@ -83,6 +83,19 @@ class _ResumenPedidoPageState extends State<ResumenPedidoPage> {
 
       if (!mounted) return;
 
+      // Salvaguarda: nunca navegar a /estado-pedido con un id vacío
+      // (provocaría "invalid input syntax for type uuid: \"\"" en el stream).
+      if (pedidoId.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'No se pudo obtener el identificador del pedido. Intenta de nuevo.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       // Limpiar estado del pedido en construcción
       context.read<PedidoProvider>().reset();
       // Limpiar carrito si tiene ítems del mismo flujo

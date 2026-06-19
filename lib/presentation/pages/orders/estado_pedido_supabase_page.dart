@@ -23,14 +23,20 @@ class _EstadoPedidoSupabasePageState
   final _repo = PedidoSupabaseRepository();
   final _fmt = DateFormat('dd/MM/yyyy HH:mm');
 
-  late final Stream<Pedido?> _stream;
+  // null cuando no llega pedidoId (p. ej. al recargar la página en web, donde
+  // los settings.arguments de la ruta no se conservan). Evita consultar con id
+  // vacío y permite mostrar un error claro en su lugar.
+  Stream<Pedido?>? _stream;
   Pedido? _last; // último estado para detectar cambios
 
   @override
   void initState() {
     super.initState();
-    // HU_26: stream Realtime — se actualiza sin recargar
-    _stream = _repo.streamPedido(widget.pedidoId);
+    // HU_26: stream Realtime — se actualiza sin recargar.
+    // Solo se abre el stream si tenemos un pedidoId válido.
+    if (widget.pedidoId.isNotEmpty) {
+      _stream = _repo.streamPedido(widget.pedidoId);
+    }
   }
 
   // HU_23: confirmar cancelación
@@ -138,7 +144,11 @@ class _EstadoPedidoSupabasePageState
             ),
 
             Expanded(
-              child: StreamBuilder<Pedido?>(
+              child: _stream == null
+                  ? _buildError(
+                      'No se pudo identificar el pedido.\n'
+                      'Vuelve a "Mis pedidos" e inténtalo de nuevo.')
+                  : StreamBuilder<Pedido?>(
                 stream: _stream,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState ==
