@@ -1,5 +1,6 @@
 import 'package:yogo_vital_app/core/models/pedido.dart';
 import 'package:yogo_vital_app/core/models/pedido_historial.dart';
+import 'package:yogo_vital_app/core/utils/id_format.dart';
 
 /// Pedido enriquecido con datos del cliente para la vista admin.
 class PedidoAdmin {
@@ -30,7 +31,7 @@ class PedidoAdmin {
   });
 
   EstadoPedido get estado => EstadoPedidoExtension.fromString(estadoRaw);
-  String get idCorto => '#${id.substring(0, 8).toUpperCase()}';
+  String get idCorto => '#${shortId(id)}';
 
   factory PedidoAdmin.fromRow(Map<String, dynamic> row) {
     final usuario = row['usuarios'] as Map<String, dynamic>? ?? {};

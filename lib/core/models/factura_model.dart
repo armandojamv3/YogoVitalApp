@@ -1,4 +1,5 @@
 import 'package:yogo_vital_app/core/models/pedido_historial.dart';
+import 'package:yogo_vital_app/core/utils/id_format.dart';
 
 /// Modelo completo de factura para HU_DetalleFactura_31.
 class FacturaModel {
@@ -65,7 +66,7 @@ class FacturaModel {
 
     return FacturaModel(
       pedidoId: id,
-      idCorto: '#${id.substring(0, 8).toUpperCase()}',
+      idCorto: '#${shortId(id)}',
       createdAt: _parseDate(row['created_at']),
       estado: row['estado'] as String? ?? '',
       tamanoNombre: tamanoMap['nombre'] as String? ?? '',

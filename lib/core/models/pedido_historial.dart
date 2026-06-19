@@ -1,4 +1,5 @@
 import 'package:yogo_vital_app/core/models/pedido.dart';
+import 'package:yogo_vital_app/core/utils/id_format.dart';
 
 /// Pedido enriquecido con nombres de sabor y tamaño para la pantalla historial.
 class PedidoHistorial {
@@ -29,11 +30,11 @@ class PedidoHistorial {
   EstadoPedido get estado => EstadoPedidoExtension.fromString(estadoRaw);
 
   /// ID corto para mostrar al usuario (ej. #AB12).
-  String get idCorto => '#${id.substring(0, 8).toUpperCase()}';
+  String get idCorto => '#${shortId(id)}';
 
   factory PedidoHistorial.fromSupabaseRow(Map<String, dynamic> row) {
     final saborMap = row['sabores'] as Map<String, dynamic>? ?? {};
-    final tamanoMap = row['tamanos'] as Map<String, dynamic>? ?? {};
+    final tamanoMap = row['tamanos_yogur'] as Map<String, dynamic>? ?? {};
 
     final frutasList = (row['pedido_frutas'] as List? ?? [])
         .map((pf) {

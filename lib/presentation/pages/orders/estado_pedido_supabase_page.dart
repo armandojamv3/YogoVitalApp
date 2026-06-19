@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:yogo_vital_app/core/models/pedido.dart';
+import 'package:yogo_vital_app/core/utils/id_format.dart';
 import 'package:yogo_vital_app/data/repositories/pedido_supabase_repository.dart';
 import 'package:yogo_vital_app/presentation/widgets/custom_bottom_nav_bar.dart';
 import 'package:yogo_vital_app/presentation/widgets/estado_badge.dart';
@@ -126,7 +127,7 @@ class _EstadoPedidoSupabasePageState
                   horizontal: 16, vertical: 8),
               color: const Color(0xFF5B9EF5).withValues(alpha: 0.1),
               child: Text(
-                'Pedido: ${widget.pedidoId.substring(0, 8).toUpperCase()}',
+                'Pedido: ${shortId(widget.pedidoId)}',
                 style: const TextStyle(
                     fontFamily: 'monospace',
                     fontSize: 12,

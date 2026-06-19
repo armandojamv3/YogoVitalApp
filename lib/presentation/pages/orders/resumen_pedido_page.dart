@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:yogo_vital_app/core/models/cart_model.dart';
 import 'package:yogo_vital_app/core/models/direccion_model.dart';
 import 'package:yogo_vital_app/core/models/pedido_local_model.dart';
+import 'package:yogo_vital_app/core/utils/id_format.dart';
 import 'package:yogo_vital_app/core/providers/pedido_provider.dart';
 import 'package:yogo_vital_app/data/repositories/pedido_supabase_repository.dart';
 import 'package:yogo_vital_app/presentation/pages/orders/direcciones_page.dart';
@@ -105,7 +106,7 @@ class _ResumenPedidoPageState extends State<ResumenPedidoPage> {
                       fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Text(
-                'Pedido: ${pedidoId.substring(0, 8).toUpperCase()}',
+                'Pedido: ${shortId(pedidoId)}',
                 style: const TextStyle(
                     fontFamily: 'monospace',
                     fontWeight: FontWeight.w600),
