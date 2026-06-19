@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -72,6 +73,12 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         title: 'Yogo Vital App',
         theme: AppTheme.light,
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        supportedLocales: const [
+          Locale('es'),
+          Locale('en'),
+        ],
+        locale: const Locale('es'),
         initialRoute: hasSession ? '/home' : '/',
         routes: {
           '/': (_) => const WelcomePage(),
