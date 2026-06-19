@@ -83,7 +83,6 @@ class PedidosAdminRepository {
       {DateTime? desde, DateTime? hasta}) async {
     var q = _db.from('pedidos').select('''
       id, estado, total, created_at, updated_at, cliente_id, direccion_id,
-      usuarios!cliente_id(nombre),
       tamanos_yogur(nombre),
       sabores(nombre)
     ''');
@@ -95,9 +94,38 @@ class PedidosAdminRepository {
     }
 
     final data = await q.order('created_at', ascending: false);
-    return (data as List)
-        .map((e) => PedidoAdmin.fromRow(e as Map<String, dynamic>))
+    final rows = (data as List).cast<Map<String, dynamic>>();
+
+    // Plan B: nombres de clientes en un lookup separado (sin embed de usuarios)
+    final clienteIds = rows
+        .map((r) => r['cliente_id']?.toString())
+        .whereType<String>()
+        .toSet()
         .toList();
+    final nombres = await _getNombresClientes(clienteIds);
+
+    // Inyecta el nombre en cada fila para que PedidoAdmin.fromRow lo lea
+    for (final r in rows) {
+      r['usuarios'] = {'nombre': nombres[r['cliente_id']?.toString()]};
+    }
+
+    return rows.map(PedidoAdmin.fromRow).toList();
+  }
+
+  /// Devuelve un mapa cliente_id -> nombre para la lista de ids dada.
+  /// Lookup separado en lugar de embed `usuarios!cliente_id(...)`, que
+  /// dependía de relaciones/RLS frágiles.
+  Future<Map<String, String>> _getNombresClientes(
+      List<String> clienteIds) async {
+    if (clienteIds.isEmpty) return {};
+    final response = await _db
+        .from('usuarios')
+        .select('id, nombre')
+        .inFilter('id', clienteIds);
+    return {
+      for (final row in (response as List))
+        row['id'].toString(): (row['nombre'] as String?) ?? '',
+    };
   }
 
   // ── Detalle completo de un pedido (HU_37) ────────────────────────────────
@@ -106,7 +134,6 @@ class PedidosAdminRepository {
     try {
       final data = await _db.from('pedidos').select('''
         id, estado, total, created_at, updated_at, cliente_id, direccion_id,
-        usuarios!cliente_id(nombre, correo),
         tamanos_yogur(nombre, precio),
         sabores(nombre),
         pedido_frutas(frutas(nombre, precio_adicional)),
