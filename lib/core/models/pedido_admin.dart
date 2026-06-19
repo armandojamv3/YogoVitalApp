@@ -35,7 +35,7 @@ class PedidoAdmin {
 
   factory PedidoAdmin.fromRow(Map<String, dynamic> row) {
     final usuario = row['usuarios'] as Map<String, dynamic>? ?? {};
-    final tamano = row['tamanos'] as Map<String, dynamic>? ?? {};
+    final tamano = row['tamanos_yogur'] as Map<String, dynamic>? ?? {};
     final sabor = row['sabores'] as Map<String, dynamic>? ?? {};
     return PedidoAdmin(
       id: row['id']?.toString() ?? '',
@@ -95,7 +95,7 @@ class PedidoAdminDetalle extends PedidoAdmin {
 
   factory PedidoAdminDetalle.fromRow(Map<String, dynamic> row) {
     final base = PedidoAdmin.fromRow(row);
-    final tamanoMap = row['tamanos'] as Map<String, dynamic>? ?? {};
+    final tamanoMap = row['tamanos_yogur'] as Map<String, dynamic>? ?? {};
 
     final frutas = (row['pedido_frutas'] as List? ?? [])
         .map((pf) {
@@ -141,7 +141,7 @@ class PedidoAdminDetalle extends PedidoAdmin {
       tamanoNombre: base.tamanoNombre,
       saborNombre: base.saborNombre,
       direccionId: base.direccionId,
-      tamanoPrice: PedidoAdmin._parseDouble(tamanoMap['precio_base']),
+      tamanoPrice: PedidoAdmin._parseDouble(tamanoMap['precio']),
       frutas: frutas,
       extras: extras,
       direccion: direccionStr,
