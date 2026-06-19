@@ -109,7 +109,7 @@ class PedidosAdminRepository {
         sabores(nombre),
         pedido_frutas(frutas(nombre, precio_adicional)),
         pedido_extras(extras(nombre, precio_adicional)),
-        historial_estados(id, estado_anterior, estado_nuevo, fecha_cambio, admin_id),
+        historial_estados(id, estado_anterior, estado_nuevo, fecha_cambio),
         direcciones(direccion, barrio)
       ''').eq('id', pedidoId).single();
 
