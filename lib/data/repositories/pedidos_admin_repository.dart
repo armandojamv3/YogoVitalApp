@@ -142,6 +142,13 @@ class PedidosAdminRepository {
         direcciones(direccion, barrio)
       ''').eq('id', pedidoId).single();
 
+      // Plan B: lookup separado del nombre del cliente (sin embed de usuarios)
+      final clienteId = data['cliente_id']?.toString();
+      if (clienteId != null && clienteId.isNotEmpty) {
+        final nombres = await _getNombresClientes([clienteId]);
+        data['usuarios'] = {'nombre': nombres[clienteId]};
+      }
+
       return PedidoAdminDetalle.fromRow(data);
     } on PostgrestException catch (e) {
       throw PedidoAdminException('No se pudo cargar el pedido: ${e.message}');
