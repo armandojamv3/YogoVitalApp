@@ -83,6 +83,7 @@ class PedidosAdminRepository {
       {DateTime? desde, DateTime? hasta}) async {
     var q = _db.from('pedidos').select('''
       id, estado, total, created_at, updated_at, cliente_id, direccion_id,
+      usuarios!cliente_id(nombre),
       tamanos_yogur(nombre),
       sabores(nombre)
     ''');
@@ -105,6 +106,7 @@ class PedidosAdminRepository {
     try {
       final data = await _db.from('pedidos').select('''
         id, estado, total, created_at, updated_at, cliente_id, direccion_id,
+        usuarios!cliente_id(nombre, correo),
         tamanos_yogur(nombre, precio),
         sabores(nombre),
         pedido_frutas(frutas(nombre, precio_adicional)),
