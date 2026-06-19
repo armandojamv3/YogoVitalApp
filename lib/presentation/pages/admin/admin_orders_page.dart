@@ -73,7 +73,6 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
       initialDateRange: _desde != null && _hasta != null
           ? DateTimeRange(start: _desde!, end: _hasta!)
           : null,
-      locale: const Locale('es'),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
           colorScheme: const ColorScheme.light(primary: _kBlue),
