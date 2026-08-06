@@ -37,7 +37,11 @@ class CustomBottomNavBar extends StatelessWidget {
         border: Border(top: BorderSide(color: Colors.grey.shade300, width: 1)),
         color: Colors.white,
       ),
-      height: 60,
+      // 60 px dejaban el icono y la etiqueta pegados al borde inferior: la
+      // barra queda justo encima del indicador de gestos del teléfono y se
+      // veía apretada. Un poco de aire arriba y abajo lo resuelve sin
+      // robarle altura real al contenido de la pantalla.
+      padding: const EdgeInsets.only(top: 6, bottom: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: List.generate(_items.length, (index) {
@@ -75,11 +79,15 @@ class CustomBottomNavBar extends StatelessWidget {
           _defaultNavigate(context, index);
         }
       },
+      // Sin esto solo el icono y el texto responden al toque, no el hueco
+      // entre ellos ni los márgenes.
+      behavior: HitTestBehavior.opaque,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon, color: color), // El icono cambia de color
+          const SizedBox(height: 2),
           Text(
             label,
             style: TextStyle(
@@ -93,28 +101,16 @@ class CustomBottomNavBar extends StatelessWidget {
     );
   }
 
+  // Todas las pestañas limpian la pila de navegación al abrirse: cada tab
+  // es la raíz de su propio flujo. Así el botón "atrás" de cada pantalla
+  // solo aparece (y solo funciona) cuando de verdad se entró desde otra
+  // pantalla (p. ej. detalle de yogur, estado de pedido, opciones de
+  // perfil) y no cuando se llega vía la barra inferior.
   void _defaultNavigate(BuildContext context, int index) {
-    switch (index) {
-      case 0: // Home: limpiar pila y abrir HomePage
-        Navigator.of(
-          context,
-        ).pushNamedAndRemoveUntil('/home', (route) => false);
-        break;
-      case 1: // Yogures: reemplazar pantalla actual
-        Navigator.of(context).pushReplacementNamed('/yogurt');
-        break;
-      case 2: // Carrito
-        Navigator.of(context).pushNamed('/cart');
-        break;
-      case 3: // Historial
-        Navigator.of(context).pushNamed('/history');
-        break;
-      case 4: // Cuenta
-        Navigator.of(context).pushNamed('/account');
-        break;
-      default:
-        break;
-    }
+    const routes = ['/home', '/yogurt', '/cart', '/history', '/account'];
+    if (index < 0 || index >= routes.length) return;
+    Navigator.of(context)
+        .pushNamedAndRemoveUntil(routes[index], (route) => false);
   }
 }
 

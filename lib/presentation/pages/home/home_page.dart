@@ -1,11 +1,13 @@
 import 'dart:async';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:yogo_vital_app/core/models/promedio_calificacion.dart';
 import 'package:yogo_vital_app/core/models/sabor.dart';
 import 'package:yogo_vital_app/data/repositories/calificacion_supabase_repository.dart';
 import 'package:yogo_vital_app/data/repositories/catalogo_repository.dart';
 import 'package:yogo_vital_app/presentation/widgets/custom_bottom_nav_bar.dart';
+import 'package:yogo_vital_app/presentation/widgets/favorite_button.dart';
+import 'package:yogo_vital_app/presentation/widgets/notification_bell.dart';
+import 'package:yogo_vital_app/presentation/widgets/sabor_search_delegate.dart';
 import 'package:yogo_vital_app/presentation/widgets/star_rating_display.dart';
 
 class HomePage extends StatefulWidget {
@@ -187,11 +189,15 @@ class _HomePageState extends State<HomePage> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Image.asset('assets/images/logo.png', height: 40),
-          IconButton(
-            icon: const Icon(Icons.search, color: Colors.white, size: 28),
-            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Búsqueda próximamente')),
-            ),
+          Row(
+            children: [
+              const NotificationBell(),
+              IconButton(
+                icon: const Icon(Icons.search, color: Colors.white, size: 28),
+                onPressed: () =>
+                    showSearch(context: context, delegate: SaborSearchDelegate()),
+              ),
+            ],
           ),
         ],
       ),
@@ -353,11 +359,20 @@ class _HomePageState extends State<HomePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Imagen
-            ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(16)),
-              child: _buildNetworkImage(s.imagenUrl,
-                  width: 160, height: 110),
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(16)),
+                  child: _buildNetworkImage(s.imagenUrl,
+                      width: 160, height: 110),
+                ),
+                Positioned(
+                  top: 6,
+                  right: 6,
+                  child: FavoriteButton(saborId: s.id, size: 18),
+                ),
+              ],
             ),
             // Info
             Padding(
@@ -431,10 +446,19 @@ class _HomePageState extends State<HomePage> {
         ),
         child: Row(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child:
-                  _buildNetworkImage(s.imagenUrl, width: 85, height: 85),
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: _buildNetworkImage(s.imagenUrl,
+                      width: 85, height: 85),
+                ),
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: FavoriteButton(saborId: s.id, size: 16),
+                ),
+              ],
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -584,19 +608,22 @@ class _HomePageState extends State<HomePage> {
             size: height * 0.5, color: Colors.orange),
       );
     }
-    return CachedNetworkImage(
-      imageUrl: url,
+    return Image.network(
+      url,
       width: width,
       height: height,
       fit: BoxFit.cover,
-      placeholder: (_, __) => Container(
-        width: width,
-        height: height,
-        color: const Color(0xFFE0E0E0),
-        child:
-            const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      ),
-      errorWidget: (_, __, ___) => Container(
+      loadingBuilder: (context, child, progress) {
+        if (progress == null) return child;
+        return Container(
+          width: width,
+          height: height,
+          color: const Color(0xFFE0E0E0),
+          child:
+              const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        );
+      },
+      errorBuilder: (_, __, ___) => Container(
         width: width,
         height: height,
         color: Colors.orange[100],

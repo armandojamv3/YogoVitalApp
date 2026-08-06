@@ -1,0 +1,206 @@
+@startuml Figura14_ERD_YogoVital
+skinparam shadowing false
+skinparam defaultFontSize 11
+hide circle
+skinparam linetype ortho
+
+
+entity "usuarios" as usuarios {
+  * id : UUID <<PK, FK -> auth.users>>
+  --
+  nombre : TEXT
+  correo : TEXT
+  telefono : TEXT
+  rol : TEXT ('cliente' | 'administrador')
+  fcm_token : TEXT (sin uso real)
+  updated_at : TIMESTAMPTZ
+}
+
+entity "direcciones" as direcciones {
+  * id : UUID <<PK>>
+  --
+  # cliente_id : UUID <<FK usuarios>>
+  direccion : TEXT
+  barrio : TEXT
+  telefono : TEXT
+  es_principal : BOOLEAN
+  created_at : TIMESTAMPTZ
+}
+
+entity "sabores" as sabores {
+  * id : UUID <<PK>>
+  --
+  nombre : TEXT (unique)
+  descripcion : TEXT
+  precio_base : NUMERIC
+  imagen_url : TEXT
+  calificacion_promedio : NUMERIC
+  activo : BOOLEAN
+  created_at : TIMESTAMPTZ
+}
+
+entity "tamanos" as tamanos {
+  * id : UUID <<PK>>
+  --
+  nombre : TEXT (unique)
+  precio_base : NUMERIC
+}
+
+entity "tamanos_yogur" as tamanos_yogur {
+  * id : UUID <<PK>>
+  --
+  nombre : TEXT (unique)
+  precio : NUMERIC
+  note: catálogo aparte para\n"Yogur Tradicional"
+}
+
+entity "frutas" as frutas {
+  * id : UUID <<PK>>
+  --
+  nombre : TEXT (unique)
+  precio_adicional : NUMERIC
+  disponible : BOOLEAN
+  imagen_url : TEXT
+  created_at : TIMESTAMPTZ
+}
+
+entity "extras" as extras {
+  * id : UUID <<PK>>
+  --
+  nombre : TEXT (unique)
+  precio_adicional : NUMERIC
+  disponible : BOOLEAN
+  imagen_url : TEXT
+  created_at : TIMESTAMPTZ
+}
+
+entity "predisenhados" as predisenhados {
+  * id : UUID <<PK>>
+  --
+  nombre : TEXT
+  descripcion : TEXT
+  ingredientes : JSONB
+  precio_total : NUMERIC
+  imagen_url : TEXT
+  activo : BOOLEAN
+  es_popular : BOOLEAN
+  es_nuevo : BOOLEAN
+  created_at : TIMESTAMPTZ
+}
+
+entity "pedidos" as pedidos {
+  * id : UUID <<PK>>
+  --
+  # cliente_id : UUID <<FK usuarios>>
+  # direccion_id : UUID <<FK direcciones>>
+  # tamano_id : UUID <<FK tamanos>>
+  # sabor_id : UUID <<FK sabores>>
+  estado : TEXT (Recibido|En preparación|\nEn camino|Entregado|Cancelado)
+  metodo_pago : TEXT (solo texto,\nsin pasarela real)
+  dulzura : TEXT (Bajo|Normal|Alto)
+  total : NUMERIC
+  created_at : TIMESTAMPTZ
+  updated_at : TIMESTAMPTZ
+}
+
+entity "pedido_frutas" as pedido_frutas {
+  * id : UUID <<PK>>
+  --
+  # pedido_id : UUID <<FK pedidos>>
+  # fruta_id : UUID <<FK frutas>>
+  note: máx. 2 por pedido\n(regla aplicada en la app)
+}
+
+entity "pedido_extras" as pedido_extras {
+  * id : UUID <<PK>>
+  --
+  # pedido_id : UUID <<FK pedidos>>
+  # extra_id : UUID <<FK extras>>
+  note: máx. 3 por pedido\n(regla aplicada en la app)
+}
+
+entity "historial_estados" as historial_estados {
+  * id : UUID <<PK>>
+  --
+  # pedido_id : UUID <<FK pedidos>>
+  estado_anterior : TEXT
+  estado_nuevo : TEXT
+  fecha_cambio : TIMESTAMPTZ
+  # admin_id : UUID <<FK usuarios>>
+}
+
+entity "calificaciones" as calificaciones {
+  * id : UUID <<PK>>
+  --
+  # pedido_id : UUID <<FK pedidos, unique>>
+  # cliente_id : UUID <<FK usuarios>>
+  estrellas : SMALLINT (1-5)
+  comentario : TEXT (max 200)
+  created_at : TIMESTAMPTZ
+}
+
+entity "notificaciones" as notificaciones {
+  * id : UUID <<PK>>
+  --
+  # usuario_id : UUID <<FK usuarios>>
+  # pedido_id : UUID <<FK pedidos>>
+  titulo : TEXT
+  mensaje : TEXT
+  tipo : TEXT
+  leida : BOOLEAN
+  created_at : TIMESTAMPTZ
+}
+
+entity "favoritos" as favoritos {
+  * id : UUID <<PK>>
+  --
+  # cliente_id : UUID <<FK usuarios>>
+  # sabor_id : UUID <<FK sabores>>
+  created_at : TIMESTAMPTZ
+  note: UNIQUE (cliente_id, sabor_id)
+}
+
+entity "promociones" as promociones {
+  * id : UUID <<PK>>
+  --
+  titulo : TEXT
+  descripcion : TEXT
+  fecha_inicio : TIMESTAMPTZ
+  fecha_fin : TIMESTAMPTZ
+  activa : BOOLEAN
+  created_at : TIMESTAMPTZ
+  note: informativa, no aplica\ndescuentos automáticos
+}
+
+usuarios ||--o{ direcciones
+usuarios ||--o{ pedidos
+usuarios ||--o{ historial_estados : "admin_id (opcional)"
+usuarios ||--o{ calificaciones
+usuarios ||--o{ notificaciones
+usuarios ||--o{ favoritos
+
+direcciones ||--o{ pedidos
+
+tamanos ||--o{ pedidos
+sabores ||--o{ pedidos
+sabores ||--o{ favoritos
+
+pedidos ||--o{ pedido_frutas
+pedidos ||--o{ pedido_extras
+pedidos ||--o{ historial_estados
+pedidos ||--o| calificaciones
+pedidos ||--o{ notificaciones
+
+frutas ||--o{ pedido_frutas
+extras ||--o{ pedido_extras
+
+note bottom
+  No incluida: relación con "predisenhados" y "tamanos_yogur"
+  (se consultan directo por el catálogo, no están enlazadas a "pedidos"
+  porque un pedido prediseñado se convierte en un pedido personalizado
+  normal al confirmarse).
+  El "Carrito" NO es una tabla: vive solo en memoria del cliente (Provider)
+  hasta que se confirma el pedido.
+end note
+
+@enduml

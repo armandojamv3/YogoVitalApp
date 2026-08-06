@@ -14,7 +14,16 @@ class PedidoAdmin {
   final String? clienteTelefono;
   final String tamanoNombre;
   final String saborNombre;
+  final String dulzura;
   final String? direccionId;
+
+  /// El pedido salió de un prediseñado: producto cerrado, sin tamaño ni
+  /// sabor propios. Su contenido está en [ingredientes].
+  final bool esPredisenhado;
+
+  /// Receta del prediseñado. El admin la necesita para saber qué preparar:
+  /// estos pedidos no generan filas en pedido_frutas ni pedido_extras.
+  final List<String> ingredientes;
 
   const PedidoAdmin({
     required this.id,
@@ -27,7 +36,10 @@ class PedidoAdmin {
     this.clienteTelefono,
     required this.tamanoNombre,
     required this.saborNombre,
+    this.dulzura = 'Normal',
     this.direccionId,
+    this.esPredisenhado = false,
+    this.ingredientes = const [],
   });
 
   EstadoPedido get estado => EstadoPedidoExtension.fromString(estadoRaw);
@@ -37,6 +49,19 @@ class PedidoAdmin {
     final usuario = row['usuarios'] as Map<String, dynamic>? ?? {};
     final tamano = row['tamanos_yogur'] as Map<String, dynamic>? ?? {};
     final sabor = row['sabores'] as Map<String, dynamic>? ?? {};
+
+    // Pedido de prediseñado: sabor_id y tamano_id quedan NULL (migración
+    // 0043), así que el producto se identifica por el prediseñado. Sin
+    // esto el admin veía el pedido sin nombre y no sabía qué preparar.
+    final predisenhado = row['predisenhados'] as Map<String, dynamic>? ?? {};
+    final nombrePredisenhado = predisenhado['nombre'] as String? ?? '';
+    final esPred = nombrePredisenhado.isNotEmpty;
+
+    final ingredientes = (predisenhado['ingredientes'] as List? ?? [])
+        .map((e) => e.toString())
+        .where((e) => e.isNotEmpty)
+        .toList();
+
     return PedidoAdmin(
       id: row['id']?.toString() ?? '',
       estadoRaw: row['estado'] as String? ?? 'Desconocido',
@@ -46,8 +71,14 @@ class PedidoAdmin {
       clienteId: row['cliente_id']?.toString() ?? '',
       clienteNombre: usuario['nombre'] as String? ?? 'Sin nombre',
       clienteTelefono: usuario['telefono'] as String?,
+      // Desde la 0045 un prediseñado también lleva tamaño. Vacío solo en
+      // los pedidos anteriores a esa migración.
       tamanoNombre: tamano['nombre'] as String? ?? '',
-      saborNombre: sabor['nombre'] as String? ?? '',
+      saborNombre:
+          esPred ? nombrePredisenhado : (sabor['nombre'] as String? ?? ''),
+      dulzura: row['dulzura'] as String? ?? 'Normal',
+      esPredisenhado: esPred,
+      ingredientes: ingredientes,
       direccionId: row['direccion_id']?.toString(),
     );
   }
@@ -72,6 +103,7 @@ class PedidoAdminDetalle extends PedidoAdmin {
   final List<IngredienteDetalle> frutas;
   final List<IngredienteDetalle> extras;
   final String? direccion;
+  final String? direccionTelefono;
   final List<HistorialEstado> historial;
 
   const PedidoAdminDetalle({
@@ -85,11 +117,15 @@ class PedidoAdminDetalle extends PedidoAdmin {
     super.clienteTelefono,
     required super.tamanoNombre,
     required super.saborNombre,
+    super.dulzura,
     super.direccionId,
+    super.esPredisenhado,
+    super.ingredientes,
     this.tamanoPrice = 0,
     this.frutas = const [],
     this.extras = const [],
     this.direccion,
+    this.direccionTelefono,
     this.historial = const [],
   });
 
@@ -128,6 +164,7 @@ class PedidoAdminDetalle extends PedidoAdmin {
     final direccionStr = dirRow != null
         ? '${dirRow['direccion'] ?? ''}, ${dirRow['barrio'] ?? ''}'
         : null;
+    final direccionTelefono = dirRow?['telefono'] as String?;
 
     return PedidoAdminDetalle(
       id: base.id,
@@ -140,11 +177,15 @@ class PedidoAdminDetalle extends PedidoAdmin {
       clienteTelefono: base.clienteTelefono,
       tamanoNombre: base.tamanoNombre,
       saborNombre: base.saborNombre,
+      dulzura: base.dulzura,
       direccionId: base.direccionId,
+      esPredisenhado: base.esPredisenhado,
+      ingredientes: base.ingredientes,
       tamanoPrice: PedidoAdmin._parseDouble(tamanoMap['precio']),
       frutas: frutas,
       extras: extras,
       direccion: direccionStr,
+      direccionTelefono: direccionTelefono,
       historial: historial,
     );
   }

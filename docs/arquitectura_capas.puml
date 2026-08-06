@@ -1,0 +1,22 @@
+@startuml Arquitectura_Multicapa_YogoVital
+skinparam shadowing false
+skinparam defaultFontSize 13
+skinparam roundcorner 8
+skinparam rectangle {
+  BackgroundColor #EAF2FB
+  BorderColor #5B9EF5
+  BorderThickness 1.5
+}
+
+title Diagrama de Arquitectura en Capas — Yogo Vital
+
+rectangle "==Capa de Presentación==\n----\nPantallas / Screens\nWidgets UI\nGestión de Estado (Provider)" as Presentacion #EAF2FB
+
+rectangle "==Capa de Datos / Lógica==\n----\nRepositorios (Sabores, Pedidos, Auth,\nFavoritos, Promociones, Notificaciones)\nModelos / DTOs · Caché Local SQLite" as Datos #FDF3D7
+
+rectangle "==Capa de Persistencia Remota==\n----\nSupabase: Auth · PostgREST · Realtime · Storage\nPostgreSQL (16 tablas + RLS)" as Persistencia #E4F5E9
+
+Presentacion -[#5B9EF5,bold]down-> Datos : depende de
+Datos -[#5B9EF5,bold]down-> Persistencia : depende de
+
+@enduml

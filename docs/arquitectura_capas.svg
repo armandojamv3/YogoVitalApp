@@ -1,0 +1,141 @@
+<svg viewBox="0 0 1000 780" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', Arial, sans-serif" role="img">
+  <title>Diagrama de Arquitectura en Capas — Yogo Vital</title>
+  <desc>Tres capas apiladas: Presentación, Datos/Lógica y Persistencia Remota, con flechas de dependencia hacia abajo.</desc>
+
+  <rect x="0" y="0" width="1000" height="780" fill="#FFFFFF"/>
+
+  <!-- Title -->
+  <text x="500" y="48" text-anchor="middle" font-size="26" font-weight="700" fill="#1A1A2E">
+    Arquitectura en Capas — Yogo Vital
+  </text>
+  <text x="500" y="74" text-anchor="middle" font-size="14" fill="#6B6B7B">
+    Cada capa depende únicamente de la capa inmediatamente inferior
+  </text>
+
+  <!-- ===================== CAPA 1: PRESENTACIÓN ===================== -->
+  <g>
+    <rect x="120" y="110" width="760" height="170" rx="16" fill="#EFF6FF" stroke="#5B9EF5" stroke-width="2"/>
+    <rect x="120" y="110" width="10" height="170" rx="5" fill="#5B9EF5"/>
+
+    <!-- icon: phone -->
+    <g transform="translate(158,140)">
+      <circle cx="26" cy="26" r="26" fill="#5B9EF5"/>
+      <rect x="14" y="10" width="24" height="32" rx="4" fill="#FFFFFF"/>
+      <rect x="17" y="14" width="18" height="20" fill="#5B9EF5"/>
+      <circle cx="26" cy="38" r="2.2" fill="#5B9EF5"/>
+    </g>
+
+    <text x="230" y="152" font-size="20" font-weight="700" fill="#1A1A2E">Capa de Presentación</text>
+    <text x="230" y="173" font-size="13" fill="#4A5568">Interfaz de usuario y gestión de estado en el dispositivo</text>
+
+    <!-- chips -->
+    <g font-size="12.5" fill="#1A1A2E">
+      <rect x="230" y="188" width="118" height="30" rx="15" fill="#FFFFFF" stroke="#BFDBFE"/>
+      <text x="289" y="207" text-anchor="middle">Pantallas / Screens</text>
+
+      <rect x="358" y="188" width="98" height="30" rx="15" fill="#FFFFFF" stroke="#BFDBFE"/>
+      <text x="407" y="207" text-anchor="middle">Widgets UI</text>
+
+      <rect x="466" y="188" width="180" height="30" rx="15" fill="#FFFFFF" stroke="#BFDBFE"/>
+      <text x="556" y="207" text-anchor="middle">Gestión de Estado (Provider)</text>
+
+      <rect x="656" y="188" width="184" height="30" rx="15" fill="#FFFFFF" stroke="#BFDBFE"/>
+      <text x="748" y="207" text-anchor="middle">Navegación por rutas</text>
+    </g>
+
+    <text x="230" y="252" font-size="12" fill="#6B6B7B" font-style="italic">
+      Corre en el dispositivo del usuario (Android, iOS o navegador)
+    </text>
+  </g>
+
+  <!-- Arrow 1 -->
+  <g>
+    <line x1="500" y1="280" x2="500" y2="326" stroke="#94A3B8" stroke-width="2.5"/>
+    <polygon points="500,336 493,320 507,320" fill="#94A3B8"/>
+    <rect x="440" y="292" width="120" height="24" rx="12" fill="#FFFFFF" stroke="#CBD5E1"/>
+    <text x="500" y="308" text-anchor="middle" font-size="12" fill="#475569">depende de</text>
+  </g>
+
+  <!-- ===================== CAPA 2: DATOS / LÓGICA ===================== -->
+  <g>
+    <rect x="120" y="340" width="760" height="180" rx="16" fill="#FEF9E7" stroke="#E8A33D" stroke-width="2"/>
+    <rect x="120" y="340" width="10" height="180" rx="5" fill="#E8A33D"/>
+
+    <!-- icon: gear -->
+    <g transform="translate(158,370)">
+      <circle cx="26" cy="26" r="26" fill="#E8A33D"/>
+      <circle cx="26" cy="26" r="10" fill="none" stroke="#FFFFFF" stroke-width="3.4"/>
+      <g stroke="#FFFFFF" stroke-width="3.4">
+        <line x1="26" y1="6" x2="26" y2="13"/>
+        <line x1="26" y1="39" x2="26" y2="46"/>
+        <line x1="6" y1="26" x2="13" y2="26"/>
+        <line x1="39" y1="26" x2="46" y2="26"/>
+        <line x1="12" y1="12" x2="17" y2="17"/>
+        <line x1="35" y1="35" x2="40" y2="40"/>
+        <line x1="40" y1="12" x2="35" y2="17"/>
+        <line x1="17" y1="35" x2="12" y2="40"/>
+      </g>
+    </g>
+
+    <text x="230" y="382" font-size="20" font-weight="700" fill="#1A1A2E">Capa de Datos / Lógica</text>
+    <text x="230" y="403" font-size="13" fill="#4A5568">Reglas de negocio y acceso a los datos (sin capa de Dominio separada)</text>
+
+    <g font-size="12.5" fill="#1A1A2E">
+      <rect x="230" y="418" width="330" height="30" rx="15" fill="#FFFFFF" stroke="#F3D89A"/>
+      <text x="395" y="437" text-anchor="middle">Repositorios (Sabores, Pedidos, Auth, Favoritos...)</text>
+
+      <rect x="570" y="418" width="120" height="30" rx="15" fill="#FFFFFF" stroke="#F3D89A"/>
+      <text x="630" y="437" text-anchor="middle">Modelos / DTOs</text>
+
+      <rect x="700" y="418" width="140" height="30" rx="15" fill="#FFFFFF" stroke="#F3D89A"/>
+      <text x="770" y="437" text-anchor="middle">Caché Local SQLite</text>
+    </g>
+
+    <text x="230" y="472" font-size="12" fill="#6B6B7B" font-style="italic">
+      Los repositorios llaman directo a Supabase; no hay interfaces ni casos de uso intermedios
+    </text>
+    <text x="230" y="492" font-size="12" fill="#6B6B7B" font-style="italic">
+      Corre también en el dispositivo, junto con la Capa de Presentación
+    </text>
+  </g>
+
+  <!-- Arrow 2 -->
+  <g>
+    <line x1="500" y1="520" x2="500" y2="566" stroke="#94A3B8" stroke-width="2.5"/>
+    <polygon points="500,576 493,560 507,560" fill="#94A3B8"/>
+    <rect x="440" y="532" width="120" height="24" rx="12" fill="#FFFFFF" stroke="#CBD5E1"/>
+    <text x="500" y="548" text-anchor="middle" font-size="12" fill="#475569">depende de</text>
+  </g>
+
+  <!-- ===================== CAPA 3: PERSISTENCIA REMOTA ===================== -->
+  <g>
+    <rect x="120" y="580" width="760" height="160" rx="16" fill="#EAF7EE" stroke="#4CAF7D" stroke-width="2"/>
+    <rect x="120" y="580" width="10" height="160" rx="5" fill="#4CAF7D"/>
+
+    <!-- icon: cloud -->
+    <g transform="translate(158,608)">
+      <circle cx="26" cy="26" r="26" fill="#4CAF7D"/>
+      <path d="M14 34 a8 8 0 0 1 2-15.7 a10 10 0 0 1 19 2.3 a7 7 0 0 1 -2 15.4 z"
+            fill="#FFFFFF"/>
+    </g>
+
+    <text x="230" y="622" font-size="20" font-weight="700" fill="#1A1A2E">Capa de Persistencia Remota</text>
+    <text x="230" y="643" font-size="13" fill="#4A5568">Backend gestionado (Supabase) y almacenamiento en la nube</text>
+
+    <g font-size="12.5" fill="#1A1A2E">
+      <rect x="230" y="658" width="290" height="30" rx="15" fill="#FFFFFF" stroke="#B7E4C7"/>
+      <text x="375" y="677" text-anchor="middle">Auth · PostgREST · Realtime · Storage</text>
+
+      <rect x="530" y="658" width="230" height="30" rx="15" fill="#FFFFFF" stroke="#B7E4C7"/>
+      <text x="645" y="677" text-anchor="middle">PostgreSQL (16 tablas + RLS)</text>
+    </g>
+
+    <text x="230" y="712" font-size="12" fill="#6B6B7B" font-style="italic">
+      Corre en la nube, fuera del control directo de la app Flutter
+    </text>
+  </g>
+
+  <text x="500" y="768" text-anchor="middle" font-size="11.5" fill="#94A3B8">
+    Elaboración propia — Yogo Vital
+  </text>
+</svg>

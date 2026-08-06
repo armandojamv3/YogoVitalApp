@@ -1,0 +1,20 @@
+@startuml Figura12_CalificarPedido
+skinparam shadowing false
+skinparam defaultFontSize 12
+
+start
+:Pedido llega a estado 'Entregado';
+note right
+  Reemplaza "Generar reporte Admin": no existe
+  módulo de reportes estadísticos en la app.
+end note
+:Cliente abre el pedido desde Historial;
+:Accede a la pantalla de Calificación;
+:Elige de 1 a 5 estrellas;
+:Escribe un comentario opcional\n(máx. 200 caracteres);
+:Envía calificación;
+:CalificacionSupabaseRepository.enviarCalificacion();
+:INSERT en calificaciones\n(pedido_id UNIQUE: una sola calificación por pedido);
+:El promedio de estrellas por sabor se calcula\nal vuelo (getPromedioEstrellasPorSabor)\ny se muestra en el catálogo;
+stop
+@enduml

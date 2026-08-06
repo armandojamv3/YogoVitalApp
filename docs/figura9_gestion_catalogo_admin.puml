@@ -1,0 +1,30 @@
+@startuml Figura9_GestionCatalogoAdmin
+skinparam shadowing false
+skinparam defaultFontSize 12
+
+start
+:Administrador entra al Panel Admin;
+:Elige módulo\n(Sabores | Frutas y Extras | Promociones);
+:Ve la lista actual del módulo elegido;
+
+if (¿Qué acción?) then (Crear)
+  :Llena el formulario\n(nombre, descripción, precio...);
+  if (¿Sube foto? [solo Sabores]) then (sí)
+    :Selecciona imagen (galería);
+    :SaboresAdminRepository.uploadImagen()\n-> Supabase Storage (bucket "sabores");
+    :Obtiene URL pública;
+  endif
+  :Guarda -> INSERT en Supabase;
+elseif (Editar) then
+  :Modifica los campos;
+  :Guarda -> UPDATE en Supabase;
+else (Eliminar)
+  :Confirma eliminación;
+  :Verifica que no tenga pedidos activos;
+  :Soft-delete -> UPDATE activo = false;
+endif
+
+:RLS valida que el usuario\ntenga rol = 'administrador';
+:Lista se refresca con los datos actuales;
+stop
+@enduml

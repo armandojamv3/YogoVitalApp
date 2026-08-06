@@ -1,0 +1,32 @@
+@startuml Figura10_CancelacionPedido
+skinparam shadowing false
+skinparam defaultFontSize 12
+
+actor Cliente
+participant "Estado del Pedido\n(pantalla)" as UI
+participant "PedidoSupabaseRepository" as Repo
+database "Supabase\n(pedidos + RLS)" as DB
+
+Cliente -> UI : Abre "Estado del pedido"
+UI -> UI : ¿estado == 'Recibido'?
+alt estado == 'Recibido'
+  UI -> Cliente : Muestra botón "Cancelar pedido"
+  Cliente -> UI : Toca "Cancelar pedido"
+  UI -> Cliente : Confirma "¿Estás seguro?"
+  Cliente -> UI : Confirma
+  UI -> Repo : cancelarPedido(pedidoId)
+  Repo -> DB : UPDATE pedidos SET estado = 'Cancelado'\nWHERE id = :pedidoId
+  DB -> DB : RLS valida cliente_id = auth.uid()
+  DB --> Repo : OK
+  Repo --> UI : éxito
+  UI -> Cliente : Muestra "Pedido cancelado"
+else estado != 'Recibido'
+  UI -> Cliente : No se muestra opción de cancelar\n(ya está en preparación o más adelante)
+end
+
+note over DB
+  No existe pasarela de pago ni reembolso
+  monetario: al no haberse cobrado en línea,
+  cancelar solo cambia el estado del pedido.
+end note
+@enduml

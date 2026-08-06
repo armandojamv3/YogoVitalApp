@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:yogo_vital_app/core/models/sabor.dart';
@@ -415,7 +418,7 @@ class _SaborCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Ícono decorativo
+            // Foto del sabor (o ícono si no tiene)
             Container(
               width: 50,
               height: 50,
@@ -429,10 +432,23 @@ class _SaborCard extends StatelessWidget {
                 ),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(
-                Icons.icecream_rounded,
-                color: sabor.activo ? _kPrimary : Colors.grey,
-                size: 28,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: (sabor.imagenUrl != null && sabor.imagenUrl!.isNotEmpty)
+                    ? Image.network(
+                        sabor.imagenUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Icon(
+                          Icons.icecream_rounded,
+                          color: sabor.activo ? _kPrimary : Colors.grey,
+                          size: 28,
+                        ),
+                      )
+                    : Icon(
+                        Icons.icecream_rounded,
+                        color: sabor.activo ? _kPrimary : Colors.grey,
+                        size: 28,
+                      ),
               ),
             ),
             const SizedBox(width: 14),
@@ -592,6 +608,12 @@ class _SaborFormPageState extends State<SaborFormPage> {
   late final TextEditingController _descripcionCtrl;
   late final TextEditingController _precioCtrl;
 
+  // ── Imagen ────────────────────────────────────────────────────────────
+  String? _imagenUrlExistente; // la que ya tenía el sabor (modo edición)
+  Uint8List? _imagenNuevaBytes; // preview de la foto recién elegida
+  String? _imagenNuevaNombre;
+  bool _subiendoImagen = false;
+
   bool get _esEdicion => widget.saborAEditar != null;
 
   @override
@@ -602,6 +624,43 @@ class _SaborFormPageState extends State<SaborFormPage> {
     _descripcionCtrl = TextEditingController(text: s?.descripcion ?? '');
     _precioCtrl = TextEditingController(
       text: s != null ? s.precioBase.toStringAsFixed(0) : '',
+    );
+    _imagenUrlExistente = s?.imagenUrl;
+  }
+
+  Future<void> _seleccionarImagen() async {
+    // Limitamos tamaño y calidad aquí: las fotos de galería/cámara suelen
+    // venir en resolución completa (varios MB) aunque en la app solo se
+    // muestren en miniaturas pequeñas. Sin este límite, cada imagen tarda
+    // mucho en cargar porque el navegador descarga el archivo completo.
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 75,
+      maxWidth: 1024,
+      maxHeight: 1024,
+    );
+    if (picked == null) return;
+    final bytes = await picked.readAsBytes();
+    setState(() {
+      _imagenNuevaBytes = bytes;
+      _imagenNuevaNombre = picked.name;
+    });
+  }
+
+  Widget _buildPreviewImagen() {
+    if (_imagenNuevaBytes != null) {
+      return Image.memory(_imagenNuevaBytes!, fit: BoxFit.cover);
+    }
+    if (_imagenUrlExistente != null && _imagenUrlExistente!.isNotEmpty) {
+      return Image.network(
+        _imagenUrlExistente!,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => const Icon(
+            Icons.icecream_rounded, color: Colors.white, size: 40),
+      );
+    }
+    return const Center(
+      child: Icon(Icons.icecream_rounded, color: Colors.white, size: 40),
     );
   }
 
@@ -623,6 +682,28 @@ class _SaborFormPageState extends State<SaborFormPage> {
     final descripcion = _descripcionCtrl.text.trim();
     final precio = double.parse(_precioCtrl.text.trim().replaceAll(',', '.'));
 
+    // Si se eligió una foto nueva, subirla primero a Storage y usar esa
+    // URL. Si no, se conserva la que ya tenía (o ninguna, si es nuevo).
+    String? imagenUrl = _imagenUrlExistente;
+    if (_imagenNuevaBytes != null) {
+      setState(() => _subiendoImagen = true);
+      try {
+        imagenUrl = await prov.repository.uploadImagen(
+          _imagenNuevaBytes!,
+          _imagenNuevaNombre ?? 'sabor.jpg',
+        );
+      } catch (e) {
+        if (mounted) {
+          setState(() => _subiendoImagen = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('$e'), backgroundColor: _kDanger),
+          );
+        }
+        return;
+      }
+      if (mounted) setState(() => _subiendoImagen = false);
+    }
+
     bool ok;
     if (_esEdicion) {
       ok = await prov.actualizarSabor(
@@ -630,12 +711,14 @@ class _SaborFormPageState extends State<SaborFormPage> {
         nombre: nombre,
         descripcion: descripcion,
         precioBase: precio,
+        imagenUrl: imagenUrl,
       );
     } else {
       ok = await prov.agregarSabor(
         nombre: nombre,
         descripcion: descripcion,
         precioBase: precio,
+        imagenUrl: imagenUrl,
       );
     }
 
@@ -659,32 +742,64 @@ class _SaborFormPageState extends State<SaborFormPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // ── Ícono ilustrativo ─────────────────────────────
+                      // ── Foto del sabor (tocar para elegir/cambiar) ────
                       Center(
-                        child: Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [
-                                Color(0xFF4A8FE7),
-                                Color(0xFF5B9EF5),
-                              ],
-                            ),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: _kPrimary.withValues(alpha: 0.35),
-                                blurRadius: 20,
-                                offset: const Offset(0, 8),
+                        child: GestureDetector(
+                          onTap: _subiendoImagen ? null : _seleccionarImagen,
+                          child: Stack(
+                            children: [
+                              Container(
+                                width: 96,
+                                height: 96,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Color(0xFF4A8FE7),
+                                      Color(0xFF5B9EF5),
+                                    ],
+                                  ),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: _kPrimary.withValues(alpha: 0.35),
+                                      blurRadius: 20,
+                                      offset: const Offset(0, 8),
+                                    ),
+                                  ],
+                                ),
+                                child: ClipOval(child: _buildPreviewImagen()),
+                              ),
+                              Positioned(
+                                right: 0,
+                                bottom: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: const BoxDecoration(
+                                    color: _kAccent,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: _subiendoImagen
+                                      ? const SizedBox(
+                                          width: 14,
+                                          height: 14,
+                                          child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white),
+                                        )
+                                      : const Icon(Icons.camera_alt_rounded,
+                                          color: Colors.white, size: 16),
+                                ),
                               ),
                             ],
                           ),
-                          child: const Icon(
-                            Icons.icecream_rounded,
-                            color: Colors.white,
-                            size: 40,
-                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Center(
+                        child: Text(
+                          'Toca para elegir una foto',
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey[500]),
                         ),
                       ),
                       const SizedBox(height: 8),

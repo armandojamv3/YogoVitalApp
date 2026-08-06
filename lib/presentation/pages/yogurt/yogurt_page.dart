@@ -1,13 +1,12 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
-import 'package:yogo_vital_app/core/models/cart_model.dart';
 import 'package:yogo_vital_app/core/models/predisenhado_model.dart';
 import 'package:yogo_vital_app/core/models/sabor.dart';
 import 'package:yogo_vital_app/data/repositories/catalogo_repository.dart';
 import 'package:yogo_vital_app/presentation/pages/yogurt/categories/personalizado_page.dart';
+import 'package:yogo_vital_app/presentation/pages/yogurt/predisenhado_detail_page.dart';
 import 'package:yogo_vital_app/presentation/widgets/custom_bottom_nav_bar.dart';
+import 'package:yogo_vital_app/presentation/widgets/sabor_search_delegate.dart';
 
 class YogurtPage extends StatefulWidget {
   const YogurtPage({super.key});
@@ -56,6 +55,10 @@ class _YogurtPageState extends State<YogurtPage>
         _loadingTypicals = false;
       });
     } catch (e) {
+      // El mensaje que ve el usuario es genérico a propósito, pero el error
+      // real tiene que quedar en algún lado: sin esto no hay forma de saber
+      // si fue la red, RLS, la sesión o un cambio de esquema.
+      debugPrint('[YogurtPage] getCatalogSabores falló: $e');
       if (!mounted) return;
       setState(() {
         _errorTypicals = 'Error al cargar sabores. Desliza para reintentar.';
@@ -73,7 +76,8 @@ class _YogurtPageState extends State<YogurtPage>
         _predisenhados = data;
         _loadingPred = false;
       });
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[YogurtPage] getPredisenhados falló: $e');
       if (!mounted) return;
       setState(() {
         _errorPred = 'Error al cargar prediseñados.';
@@ -95,10 +99,16 @@ class _YogurtPageState extends State<YogurtPage>
               color: const Color(0xFF5B9EF5),
               child: Row(
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
-                  ),
+                  // Solo se muestra si se llegó empujando esta pantalla
+                  // desde otra (no cuando se abre desde la barra inferior,
+                  // que limpia la pila y convierte esta página en raíz).
+                  if (Navigator.canPop(context))
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: () => Navigator.pop(context),
+                    )
+                  else
+                    const SizedBox(width: 48),
                   Expanded(
                     child: Center(
                       child: Image.asset('assets/images/logo.png', height: 36),
@@ -106,9 +116,8 @@ class _YogurtPageState extends State<YogurtPage>
                   ),
                   IconButton(
                     icon: const Icon(Icons.search, color: Colors.white),
-                    onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Búsqueda próximamente')),
-                    ),
+                    onPressed: () => showSearch(
+                        context: context, delegate: SaborSearchDelegate()),
                   ),
                 ],
               ),
@@ -277,8 +286,21 @@ class _YogurtPageState extends State<YogurtPage>
   }
 
   // HU_09: card de prediseñado con badge + ingredientes + botón Seleccionar
+  /// Abre el detalle del prediseñado. Al volver, recarga las reseñas de la
+  /// pestaña por si el usuario calificó algo desde ahí.
+  void _abrirDetallePred(PredisenhadoModel p) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PredisenhadoDetailPage(predisenhado: p),
+      ),
+    );
+  }
+
   Widget _buildPredCard(PredisenhadoModel p) {
-    return Container(
+    return GestureDetector(
+      onTap: () => _abrirDetallePred(p),
+      child: Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -309,13 +331,23 @@ class _YogurtPageState extends State<YogurtPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(p.nombre,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 12)),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(p.nombre,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 12)),
+                    ),
+                    if (p.esNuevo)
+                      _buildMiniBadge('Nuevo', const Color(0xFF2196F3))
+                    else if (p.esPopular)
+                      _buildMiniBadge('Popular', const Color(0xFFFF9800)),
+                  ],
+                ),
                 const SizedBox(height: 2),
-                Text(_cop.format(p.precio),
+                Text(_cop.format(p.precioTotal),
                     style: const TextStyle(
                         color: Color(0xFF2E7D32),
                         fontWeight: FontWeight.w600,
@@ -334,7 +366,12 @@ class _YogurtPageState extends State<YogurtPage>
                   width: double.infinity,
                   height: 28,
                   child: ElevatedButton(
-                    onPressed: () => _showPredDialog(p),
+                    // Antes abría un diálogo que agregaba al carrito con
+                    // la cantidad. Ya no sirve: desde la migración 0045 el
+                    // tamaño es obligatorio y ese diálogo no lo pedía, así
+                    // que el pedido moría en el checkout. Se manda al
+                    // detalle, que es donde se elige tamaño y cantidad.
+                    onPressed: () => _abrirDetallePred(p),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF4CAF50),
                       padding: EdgeInsets.zero,
@@ -351,100 +388,26 @@ class _YogurtPageState extends State<YogurtPage>
           ),
         ],
       ),
+      ),
     );
   }
 
-  // HU_09: diálogo para confirmar cantidad + agregar al carrito
-  Future<void> _showPredDialog(PredisenhadoModel p) async {
-    final cart = context.read<CartModel>();
-    int qty = 1;
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) => AlertDialog(
-          contentPadding: const EdgeInsets.all(14),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: _netImg(p.imagenUrl, height: 130),
-                ),
-                const SizedBox(height: 10),
-                Text(p.nombre,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 15)),
-                const SizedBox(height: 4),
-                if (p.descripcion.isNotEmpty)
-                  Text(p.descripcion,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 12)),
-                const SizedBox(height: 8),
-                Text(_cop.format(p.precio),
-                    style: const TextStyle(
-                        color: Color(0xFF2E7D32),
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16)),
-                const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      onPressed: () => setS(() { if (qty > 1) qty--; }),
-                      icon: const Icon(Icons.remove_circle_outline),
-                    ),
-                    Text('$qty',
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold)),
-                    IconButton(
-                      onPressed: () => setS(() => qty++),
-                      icon: const Icon(Icons.add_circle_outline),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cerrar'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4CAF50)),
-              child: const Text('Agregar',
-                  style: TextStyle(color: Colors.white)),
-            ),
-          ],
+  Widget _buildMiniBadge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
         ),
       ),
     );
-
-    if (confirmed == true && mounted) {
-      cart.addItem(CartItem(
-        id: 'pred_${p.id}',
-        title: p.nombre,
-        price: p.precio.round(),
-        image: p.imagenUrl ?? '',
-        size: 'Prediseñado',
-        qty: qty,
-      ));
-      if (!mounted) return;
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentSnackBar();
-      final controller = messenger.showSnackBar(
-        SnackBar(
-          content: Text('${p.nombre} agregado al carrito'),
-          backgroundColor: const Color(0xFF4CAF50),
-        ),
-      );
-      Future.delayed(const Duration(seconds: 3), controller.close);
-    }
   }
 
   // ── Tab 3: Personalizados ───────────────────────────────────────────────
@@ -595,19 +558,22 @@ class _YogurtPageState extends State<YogurtPage>
         ),
       );
     }
-    return CachedNetworkImage(
-      imageUrl: url,
+    return Image.network(
+      url,
       height: height,
       width: double.infinity,
       fit: BoxFit.cover,
-      placeholder: (_, __) => Container(
-        height: height,
-        color: const Color(0xFFE0E0E0),
-        child: const Center(
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
-      ),
-      errorWidget: (_, __, ___) => Container(
+      loadingBuilder: (context, child, progress) {
+        if (progress == null) return child;
+        return Container(
+          height: height,
+          color: const Color(0xFFE0E0E0),
+          child: const Center(
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        );
+      },
+      errorBuilder: (_, __, ___) => Container(
         height: height,
         color: Colors.orange[100],
         child: const Center(

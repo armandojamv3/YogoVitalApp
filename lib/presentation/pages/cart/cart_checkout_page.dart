@@ -7,7 +7,18 @@ import 'package:yogo_vital_app/data/repositories/pedido_supabase_repository.dart
 import 'package:yogo_vital_app/presentation/pages/orders/direcciones_page.dart';
 
 class CartCheckoutPage extends StatefulWidget {
-  const CartCheckoutPage({super.key});
+  /// Compra directa: si viene con valor, el checkout usa SOLO estos ítems e
+  /// ignora el carrito por completo — no los agrega, no los marca y no lo
+  /// vacía al terminar. Sirve para el "Pedir ahora" de un prediseñado, donde
+  /// el precio ya está cerrado y pasar por el carrito es un rodeo.
+  ///
+  /// En null (el caso normal) se comporta como siempre: toma los ítems
+  /// marcados del carrito y lo vacía al confirmar.
+  final List<CartItem>? itemsDirectos;
+
+  const CartCheckoutPage({super.key, this.itemsDirectos});
+
+  bool get esCompraDirecta => itemsDirectos != null;
 
   @override
   State<CartCheckoutPage> createState() => _CartCheckoutPageState();
@@ -17,6 +28,11 @@ class _CartCheckoutPageState extends State<CartCheckoutPage> {
   final _repo = PedidoSupabaseRepository();
   final _cop = NumberFormat.currency(
       locale: 'es_CO', symbol: '\$', decimalDigits: 0);
+
+  /// Ítems que se van a pedir: los de compra directa, o los marcados del
+  /// carrito.
+  List<CartItem> _itemsAPedir(CartModel cart) =>
+      widget.itemsDirectos ?? cart.items.where((it) => it.checked).toList();
 
   List<DireccionModel> _dirs = [];
   DireccionModel? _selected;
@@ -58,22 +74,32 @@ class _CartCheckoutPageState extends State<CartCheckoutPage> {
   Future<void> _confirmar(CartModel cart) async {
     if (_selected == null || _metodoPago == null) return;
 
-    final checkedItems = cart.items.where((it) => it.checked).toList();
-    if (checkedItems.isEmpty) return;
+    final itemsAPedir = _itemsAPedir(cart);
+    if (itemsAPedir.isEmpty) return;
 
     setState(() => _confirming = true);
     try {
-      for (final item in checkedItems) {
-        await _repo.createPedidoFromCartItem(
-          saborId: item.id.isNotEmpty ? item.id : null,
+      for (final item in itemsAPedir) {
+        // Los prediseñados entran al carrito con el id prefijado
+        // ('pred_<uuid>', ver YogurtPage). Antes ese id se mandaba tal cual
+        // como sabor_id y Postgres lo rechazaba por no ser un UUID válido,
+        // así que ningún prediseñado del carrito llegaba a convertirse en
+        // pedido. Ahora se separan los dos casos.
+        final esPredisenhado = item.id.startsWith('pred_');
+        await _repo.createPedidoDesdeCarrito(
+          predisenhadoId:
+              esPredisenhado ? item.id.substring('pred_'.length) : null,
+          saborId: esPredisenhado || item.id.isEmpty ? null : item.id,
+          tamanoId: item.tamanoId,
           direccionId: _selected!.id,
-          total: (item.price * item.qty).toDouble(),
           metodoPago: _metodoPago!,
+          cantidad: item.qty,
         );
       }
 
       if (!mounted) return;
-      cart.clear();
+      // En compra directa el carrito no se toca: esos ítems nunca entraron.
+      if (!widget.esCompraDirecta) cart.clear();
 
       await showDialog<void>(
         context: context,
@@ -134,11 +160,11 @@ class _CartCheckoutPageState extends State<CartCheckoutPage> {
   @override
   Widget build(BuildContext context) {
     final cart = context.watch<CartModel>();
-    final checked = cart.items.where((it) => it.checked).toList();
-    final total = checked.fold<int>(0, (s, it) => s + it.price * it.qty);
+    final items = _itemsAPedir(cart);
+    final total = items.fold<int>(0, (s, it) => s + it.price * it.qty);
     final canConfirm = _selected != null &&
         _metodoPago != null &&
-        checked.isNotEmpty &&
+        items.isNotEmpty &&
         !_confirming;
 
     return Scaffold(
@@ -176,7 +202,7 @@ class _CartCheckoutPageState extends State<CartCheckoutPage> {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    _buildResumen(checked, total),
+                    _buildResumen(items, total),
                     const SizedBox(height: 16),
                     _buildDireccionSection(),
                     const SizedBox(height: 16),
@@ -232,8 +258,13 @@ class _CartCheckoutPageState extends State<CartCheckoutPage> {
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14)),
                         ),
-                        child: const Text('Volver al carrito',
-                            style: TextStyle(
+                        // En compra directa no se viene del carrito, sino
+                        // del detalle del producto.
+                        child: Text(
+                            widget.esCompraDirecta
+                                ? 'Volver'
+                                : 'Volver al carrito',
+                            style: const TextStyle(
                                 color: Color(0xFF5B9EF5), fontSize: 15)),
                       ),
                     ),

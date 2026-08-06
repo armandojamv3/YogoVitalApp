@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:yogo_vital_app/core/models/sabor.dart';
 
@@ -28,12 +30,38 @@ class SaboresAdminRepository {
     }
   }
 
+  // ── IMAGEN ── sube la foto a Supabase Storage y devuelve la URL pública ──
+
+  Future<String> uploadImagen(Uint8List bytes, String fileName) async {
+    try {
+      // El nombre que entrega la galería/selector (picked.name) puede traer
+      // espacios, acentos o paréntesis (p.ej. "Screenshot 2024 (1).png").
+      // Eso genera una URL pública mal formada y CachedNetworkImage se
+      // queda colgado en el placeholder en vez de mostrar error (bug
+      // conocido en Flutter Web). Por eso generamos un nombre seguro,
+      // conservando solo la extensión original del archivo.
+      final ext = fileName.contains('.') ? fileName.split('.').last : 'jpg';
+      final safeExt =
+          RegExp(r'^[a-zA-Z0-9]+$').hasMatch(ext) ? ext.toLowerCase() : 'jpg';
+      final path = '${DateTime.now().millisecondsSinceEpoch}.$safeExt';
+      await _db.storage.from('sabores').uploadBinary(
+            path,
+            bytes,
+            fileOptions: const FileOptions(upsert: true),
+          );
+      return _db.storage.from('sabores').getPublicUrl(path);
+    } on StorageException catch (e) {
+      throw SaboresAdminException('No se pudo subir la imagen: ${e.message}');
+    }
+  }
+
   // ── CREATE ── HU_AgregarSabor_32 ─────────────────────────────────────────
 
   Future<Sabor> createSabor({
     required String nombre,
     required String descripcion,
     required double precioBase,
+    String? imagenUrl,
   }) async {
     try {
       final data = await _db
@@ -43,6 +71,7 @@ class SaboresAdminRepository {
             'descripcion': descripcion.trim(),
             'precio_base': precioBase,
             'activo': true,
+            if (imagenUrl != null) 'imagen_url': imagenUrl,
           })
           .select()
           .single();
@@ -59,6 +88,7 @@ class SaboresAdminRepository {
     required String nombre,
     required String descripcion,
     required double precioBase,
+    String? imagenUrl,
   }) async {
     try {
       final data = await _db
@@ -67,6 +97,7 @@ class SaboresAdminRepository {
             'nombre': nombre.trim(),
             'descripcion': descripcion.trim(),
             'precio_base': precioBase,
+            if (imagenUrl != null) 'imagen_url': imagenUrl,
           })
           .eq('id', id)
           .select()

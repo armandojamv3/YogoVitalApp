@@ -106,7 +106,13 @@ class _EstadoPedidoSupabasePageState
               child: Row(
                 children: [
                   GestureDetector(
-                    onTap: () => Navigator.pop(context),
+                    // Esta pantalla se llega vía "Ver mi pedido", que limpia
+                    // la pila de navegación (pushNamedAndRemoveUntil). Un
+                    // Navigator.pop() genérico aquí queda en un estado
+                    // ambiguo (pantalla en blanco). Navegamos explícitamente
+                    // a Historial, que es a donde el usuario espera volver.
+                    onTap: () => Navigator.of(context)
+                        .pushNamedAndRemoveUntil('/history', (r) => false),
                     child: const Icon(Icons.arrow_back,
                         color: Colors.white),
                   ),
@@ -331,6 +337,13 @@ class _EstadoPedidoSupabasePageState
               const Icon(Icons.error_outline, color: Colors.red, size: 48),
               const SizedBox(height: 12),
               Text(msg, textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.of(context)
+                    .pushNamedAndRemoveUntil('/history', (r) => false),
+                icon: const Icon(Icons.history),
+                label: const Text('Ir a Mis Pedidos'),
+              ),
             ],
           ),
         ),

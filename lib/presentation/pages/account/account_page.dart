@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yogo_vital_app/core/providers/auth_provider.dart';
+import 'package:yogo_vital_app/core/services/user_role_service.dart';
 import 'package:yogo_vital_app/data/repositories/auth_repository.dart';
+import 'package:yogo_vital_app/presentation/pages/favoritos/favoritos_page.dart';
+import 'package:yogo_vital_app/presentation/pages/promociones/promociones_page.dart';
 import 'package:yogo_vital_app/presentation/widgets/custom_bottom_nav_bar.dart';
 
 class AccountPage extends StatelessWidget {
@@ -67,11 +70,17 @@ class AccountPage extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  GestureDetector(
-                    onTap: () => Navigator.of(context).pop(),
-                    child: const Icon(Icons.arrow_back_ios_new_rounded,
-                        color: Colors.white, size: 20),
-                  ),
+                  // Solo si se llegó empujando esta pantalla desde otra.
+                  // Al abrirse desde la barra inferior es la raíz del tab
+                  // "Cuenta" y no hay nada a lo cual volver.
+                  if (Navigator.canPop(context))
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      child: const Icon(Icons.arrow_back_ios_new_rounded,
+                          color: Colors.white, size: 20),
+                    )
+                  else
+                    const SizedBox(width: 20),
                   const Expanded(
                     child: Center(
                       child: Text(
@@ -192,20 +201,40 @@ class AccountPage extends StatelessWidget {
                     icon: Icons.favorite_border_rounded,
                     iconColor: const Color(0xFFE91E63),
                     title: 'Tus Favoritos',
-                    onTap: () {},
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const FavoritosPage()),
+                    ),
                   ),
                   _OptionTile(
                     icon: Icons.local_offer_outlined,
                     iconColor: const Color(0xFFFF9800),
                     title: 'Promociones',
-                    onTap: () {},
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const PromocionesPage()),
+                    ),
                   ),
-                  _OptionTile(
-                    icon: Icons.admin_panel_settings_outlined,
-                    iconColor: const Color(0xFF9C27B0),
-                    title: 'Administración',
-                    onTap: () =>
-                        Navigator.pushNamed(context, '/admin/dashboard'),
+                  // Solo visible para usuarios con rol 'administrador'.
+                  // Las pantallas /admin/* ya se autoprotegen (RNF08), pero
+                  // mostrar la opción a clientes normales era confuso: la
+                  // veían y no llevaba a nada útil para ellos.
+                  FutureBuilder<bool>(
+                    future: UserRoleService.isAdmin(),
+                    builder: (context, snapshot) {
+                      if (snapshot.data != true) {
+                        return const SizedBox.shrink();
+                      }
+                      return _OptionTile(
+                        icon: Icons.admin_panel_settings_outlined,
+                        iconColor: const Color(0xFF9C27B0),
+                        title: 'Administración',
+                        onTap: () =>
+                            Navigator.pushNamed(context, '/admin/dashboard'),
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 20),

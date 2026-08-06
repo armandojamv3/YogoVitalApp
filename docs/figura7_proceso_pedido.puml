@@ -1,0 +1,39 @@
+@startuml Figura7_ProcesoCompletoPedido
+skinparam shadowing false
+skinparam defaultFontSize 12
+
+start
+:Cliente abre "Yogures"\n(pestañas: Típicos | Prediseñados | Personalizado);
+if (¿Elige Personalizado?) then (sí)
+  :Selecciona Tamaño;
+  :Selecciona Sabor;
+  :Selecciona Nivel de dulzura\n(Bajo / Normal / Alto);
+  :Agrega hasta 2 Frutas;
+  note right: Bloqueado al llegar\na kMaxFrutas = 2
+  :Agrega hasta 3 Extras;
+  note right: Bloqueado al llegar\na kMaxExtras = 3
+else (Típico / Prediseñado)
+  :Selecciona un combo ya armado del catálogo;
+endif
+:Ve el resumen del pedido y el precio total\n(calculado 100% local);
+:Agrega al Carrito (en memoria, CartModel);
+:Va a Checkout;
+:Selecciona dirección de entrega\n(o crea una nueva);
+:Selecciona método de pago (texto);
+:Confirma el pedido;
+:PedidoSupabaseRepository.createPedido()\nINSERT en pedidos + pedido_frutas + pedido_extras;
+:Pedido queda en estado 'Recibido';
+:Cliente es dirigido a "Estado del pedido"\n(seguimiento en tiempo real vía Realtime);
+
+if (¿Estado sigue en 'Recibido'?) then (sí)
+  :Cliente puede cancelar el pedido\n(ver Figura 10);
+else (no)
+endif
+
+:Administrador va cambiando el estado\n(ver Figura 6) hasta 'Entregado';
+:Cliente recibe notificación in-app\nen cada cambio de estado;
+if (¿Pedido llegó a 'Entregado'?) then (sí)
+  :Cliente puede calificarlo\n(ver Figura 12);
+endif
+stop
+@enduml

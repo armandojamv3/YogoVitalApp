@@ -1,0 +1,258 @@
+@startuml Figura13_Clases_YogoVital
+skinparam shadowing false
+skinparam defaultFontSize 11
+skinparam classAttributeIconSize 0
+
+
+' ── Catálogo (Supabase, solo lectura desde el cliente; CRUD desde admin) ──
+class Sabor {
+  +id: String
+  +nombre: String
+  +descripcion: String
+  +precioBase: double
+  +imagenUrl: String?
+  +calificacionPromedio: double
+  +activo: bool
+  +fromJson(json): Sabor
+}
+
+class Fruta {
+  +id: String
+  +nombre: String
+  +precioAdicional: double
+  +disponible: bool
+  +imagenUrl: String?
+}
+
+class Extra {
+  +id: String
+  +nombre: String
+  +precioAdicional: double
+  +disponible: bool
+  +imagenUrl: String?
+}
+
+class TamanoModel {
+  +id: String
+  +nombre: String
+  +precioBase: double
+}
+
+class PredisenhadoModel {
+  +id: String
+  +nombre: String
+  +descripcion: String
+  +ingredientes: List<dynamic>
+  +precioTotal: double
+  +esPopular: bool
+  +esNuevo: bool
+}
+
+class DireccionModel {
+  +id: String
+  +clienteId: String
+  +direccion: String
+  +barrio: String
+  +telefono: String
+  +esPrincipal: bool
+  +etiqueta: String
+}
+
+' ── Sesión de personalización (estado en memoria, Provider) ──
+class PedidoProvider <<ChangeNotifier>> {
+  -_state: PedidoLocalModel
+  +total: double
+  +canAddToCart: bool
+  +selectTamano(t: TamanoModel): void
+  +selectSabor(s: Sabor): void
+  +selectDulzura(nivel: String): void
+  +toggleFruta(f: Fruta): bool
+  +toggleExtra(e: Extra): bool
+  +reset(): void
+  ..constantes..
+  kMaxFrutas = 2
+  kMaxExtras = 3
+}
+
+class PedidoLocalModel {
+  +tamano: TamanoModel?
+  +sabor: Sabor?
+  +dulzura: String
+  +frutas: List<Fruta>
+  +extras: List<Extra>
+  +total: double
+  +copyWith(...): PedidoLocalModel
+}
+
+' ── Carrito: NO es una tabla, vive solo en memoria del cliente ──
+class CartModel <<ChangeNotifier>> {
+  -_items: List<CartItem>
+  +items: List<CartItem>
+  +subtotal: int
+  +addItem(item: CartItem): void
+  +removeItem(id, size): void
+  +updateQty(id, size, qty): void
+  +clear(): void
+}
+
+class CartItem {
+  +id: String
+  +title: String
+  +price: int
+  +size: String
+  +qty: int
+  +checked: bool
+  +tipo: String
+}
+
+note bottom of CartModel
+  El carrito no se persiste en Supabase.
+  Al confirmar el pedido, cada CartItem se
+  inserta directo en "pedidos" (PedidoSupabaseRepository).
+end note
+
+' ── Pedido real (persistido) ──
+class PedidoAdmin {
+  +id: String
+  +clienteId: String
+  +estado: String
+  +metodoPago: String
+  +dulzura: String
+  +total: double
+  +createdAt: DateTime
+}
+
+class PedidoAdminDetalle {
+  +direccion: DireccionModel?
+  +frutas: List<Fruta>
+  +extras: List<Extra>
+  +historial: List<HistorialEstado>
+}
+
+class HistorialEstado {
+  +id: String
+  +pedidoId: String
+  +estadoAnterior: String?
+  +estadoNuevo: String
+  +fechaCambio: DateTime
+  +adminId: String?
+}
+
+class Calificacion {
+  +id: String
+  +pedidoId: String
+  +clienteId: String
+  +estrellas: int
+  +comentario: String?
+}
+
+class Notificacion {
+  +id: String
+  +usuarioId: String
+  +pedidoId: String?
+  +titulo: String
+  +mensaje: String
+  +tipo: String
+  +leida: bool
+}
+
+class Promocion {
+  +id: String
+  +titulo: String
+  +descripcion: String
+  +fechaInicio: DateTime
+  +fechaFin: DateTime?
+  +activa: bool
+  +vigente: bool
+}
+
+' ── Repositorios (hablan directo con Supabase; sin capa de Dominio) ──
+class PedidoSupabaseRepository {
+  +createPedido(pedidoLocal, direccionId, metodoPago): PedidoAdmin
+}
+
+class PedidosAdminRepository {
+  -_transiciones: Map<String,List<String>>
+  +getPedidos(): List<PedidoAdmin>
+  +getDetalle(id): PedidoAdminDetalle
+  +cambiarEstado(id, nuevoEstado): void
+  ' cambiarEstado también inserta una Notificacion in-app
+}
+
+class AuthRepository {
+  +login(email, password): AuthResponse
+  +register(...): AuthResponse
+  +signInWithGoogle(): bool
+  +ensureUsuarioExists(user): void
+}
+
+class CatalogoRepository {
+  +getSaboresHome(): List<Sabor>
+  +getCatalogSabores(): List<Sabor>
+  +getPredisenhados(): List<PredisenhadoModel>
+  +buscarSabores(query): List<Sabor>
+}
+
+class PersonalizacionRepository {
+  +getTamanos(): List<TamanoModel>
+  +getSabores(): List<Sabor>
+  +getFrutas(): List<Fruta>
+  +getExtras(): List<Extra>
+  ' fallback automático a LocalDatabase si Supabase falla
+}
+
+class LocalDatabase <<SQLite>> {
+  +getAll(tabla): List<Map>
+  +replaceAll(tabla, filas): void
+  ' caché de catálogo, solo lectura offline
+}
+
+class FavoritosRepository {
+  +streamFavoritoIds(): Stream<Set<String>>
+  +toggle(saborId): void
+  +getFavoritosConDetalle(): List<Sabor>
+}
+
+class PromocionesRepository {
+  +streamVigentes(): Stream<List<Promocion>>
+  +crear/actualizar/eliminar(...)
+}
+
+class NotificacionesRepository {
+  +streamNotificaciones(): Stream<List<Notificacion>>
+  +marcarTodasLeidas(): void
+}
+
+' ── Relaciones ──
+PedidoProvider --> PedidoLocalModel : administra
+PedidoLocalModel --> TamanoModel
+PedidoLocalModel --> Sabor
+PedidoLocalModel --> "0..2" Fruta
+PedidoLocalModel --> "0..3" Extra
+
+CartModel --> "*" CartItem
+
+PedidoSupabaseRepository ..> PedidoLocalModel : usa
+PedidoSupabaseRepository ..> PedidoAdmin : crea
+
+PedidosAdminRepository --> PedidoAdmin
+PedidoAdmin <|-- PedidoAdminDetalle
+PedidoAdminDetalle --> DireccionModel
+PedidoAdminDetalle --> "0..2" Fruta
+PedidoAdminDetalle --> "0..3" Extra
+PedidoAdminDetalle --> "*" HistorialEstado
+
+PedidoAdmin --> "0..1" Calificacion
+PedidoAdmin --> "*" Notificacion
+
+PersonalizacionRepository ..> LocalDatabase : caché de respaldo
+CatalogoRepository ..> Sabor
+CatalogoRepository ..> PredisenhadoModel
+
+FavoritosRepository ..> Sabor
+PromocionesRepository ..> Promocion
+NotificacionesRepository ..> Notificacion
+
+AuthRepository ..> "usuarios (rol)" : ensureUsuarioExists
+
+@enduml

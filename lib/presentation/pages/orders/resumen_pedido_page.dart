@@ -135,11 +135,13 @@ class _ResumenPedidoPageState extends State<ResumenPedidoPage> {
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(ctx);
+                // El id va en la URL (no en `arguments`) para que la página
+                // de seguimiento siga funcionando si el usuario recarga el
+                // navegador.
                 Navigator.pushNamedAndRemoveUntil(
                   context,
-                  '/estado-pedido',
+                  '/estado-pedido/$pedidoId',
                   (r) => r.settings.name == '/home',
-                  arguments: pedidoId,
                 );
               },
               style: ElevatedButton.styleFrom(
@@ -323,6 +325,8 @@ class _ResumenPedidoPageState extends State<ResumenPedidoPage> {
 
           if (pedido.sabor != null)
             _row('🍓 Sabor base', pedido.sabor!.nombre, 'Incluido'),
+
+          _row('🍬 Dulzura', pedido.dulzura, ''),
 
           if (pedido.frutas.isNotEmpty) ...[
             const SizedBox(height: 4),

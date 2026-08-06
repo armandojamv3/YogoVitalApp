@@ -34,6 +34,43 @@ serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
+    // ── Autorización ──────────────────────────────────────────────────────
+    // Vulnerabilidad corregida: antes cualquiera con sesión podía pasar
+    // cualquier cliente_id y esta función buscaba su fcm_token sin más
+    // verificación (podía usarse para sondear usuarios o disparar
+    // notificaciones falsas a nombre de otra persona). Ahora se valida el
+    // JWT del que llama (verificado por Supabase antes de invocar la
+    // función) y solo se permite si el llamador ES el cliente_id, o si es
+    // administrador.
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    const {
+      data: { user: caller },
+      error: authError,
+    } = await supabase.auth.getUser(token);
+
+    if (authError || !caller) {
+      return new Response(
+        JSON.stringify({ error: "No autenticado" }),
+        { status: 401, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    if (caller.id !== cliente_id) {
+      const { data: llamador } = await supabase
+        .from("usuarios")
+        .select("rol")
+        .eq("id", caller.id)
+        .single();
+
+      if (llamador?.rol !== "administrador") {
+        return new Response(
+          JSON.stringify({ error: "No autorizado para notificar a este usuario" }),
+          { status: 403, headers: { "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     // Obtener fcm_token del cliente
     const { data: usuario, error } = await supabase
       .from("usuarios")

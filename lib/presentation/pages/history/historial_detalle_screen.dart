@@ -185,8 +185,36 @@ class _HistorialDetalleScreenState extends State<HistorialDetalleScreen> {
                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                       ),
                       const SizedBox(height: 10),
-                      _InfoRow(label: 'Tamaño', value: p.tamanoNombre),
-                      _InfoRow(label: 'Sabor', value: p.saborNombre),
+
+                      // Un prediseñado es un producto cerrado: no tiene
+                      // tamaño ni sabor propios, y su contenido está en la
+                      // lista `ingredientes` en vez de en frutas/extras.
+                      if (p.esPredisenhado) ...[
+                        _InfoRow(label: 'Prediseñado', value: p.saborNombre),
+                        // Vacío solo en prediseñados pedidos antes de la
+                        // migración 0045, cuando aún no se elegía tamaño.
+                        if (p.tamanoNombre.isNotEmpty)
+                          _InfoRow(label: 'Tamaño', value: p.tamanoNombre),
+                        if (p.ingredientes.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          const Text('Incluye',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.teal)),
+                          const SizedBox(height: 4),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: p.ingredientes
+                                .map((i) => _Chip(label: i))
+                                .toList(),
+                          ),
+                        ],
+                      ] else ...[
+                        _InfoRow(label: 'Tamaño', value: p.tamanoNombre),
+                        _InfoRow(label: 'Sabor', value: p.saborNombre),
+                      ],
+
                       if (p.frutas.isNotEmpty) ...[
                         const SizedBox(height: 8),
                         const Text('Frutas',

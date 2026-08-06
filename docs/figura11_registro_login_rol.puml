@@ -1,0 +1,39 @@
+@startuml Figura11_RegistroLoginRol
+skinparam shadowing false
+skinparam defaultFontSize 12
+
+actor Usuario
+participant "App Flutter" as App
+participant "GoTrue\n(Supabase Auth)" as Auth
+database "PostgreSQL\n(usuarios)" as DB
+
+alt Registro con correo
+  Usuario -> App : Nombre, correo, teléfono, contraseña
+  App -> Auth : auth.signUp(email, password, data)
+else Inicio de sesión con Google
+  Usuario -> App : Toca "Continuar con Google"
+  App -> Auth : auth.signInWithOAuth(Google)
+  Auth --> Usuario : Redirección de consentimiento OAuth
+end
+
+Auth -> Auth : Crea fila en auth.users
+Auth -> DB : Trigger on_auth_user_created\n-> INSERT usuarios (rol = 'cliente' por defecto)
+Auth --> App : AuthResponse (JWT)
+
+App -> DB : ensureUsuarioExists(user)
+alt fila ya existe pero "nombre" vacío (caso Google)
+  App -> DB : UPDATE usuarios SET nombre = ...
+else fila no existía
+  App -> DB : INSERT usuarios (id, nombre, correo, rol='cliente')
+end
+
+App -> DB : SELECT rol FROM usuarios WHERE id = auth.uid()
+DB --> App : rol
+App -> App : Si rol == 'administrador'\n-> muestra opción "Administración" en el menú
+
+note over DB
+  No hay pantalla de administrador para crear/editar
+  otras cuentas. El rol se asigna por defecto ('cliente')
+  y solo se cambia a 'administrador' manualmente en Supabase.
+end note
+@enduml

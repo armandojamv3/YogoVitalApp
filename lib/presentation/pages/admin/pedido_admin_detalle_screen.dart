@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:yogo_vital_app/core/models/pedido.dart';
 import 'package:yogo_vital_app/core/models/pedido_admin.dart';
@@ -97,6 +98,17 @@ class _PedidoAdminDetalleScreenState extends State<PedidoAdminDetalleScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.message), backgroundColor: _kDanger),
+      );
+    } catch (e) {
+      // Red de seguridad: cualquier error no anticipado (por ejemplo, un
+      // PostgrestException que no vino envuelto) también debe verse en
+      // pantalla en vez de fallar en silencio.
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No se pudo cambiar el estado: $e'),
+          backgroundColor: _kDanger,
+        ),
       );
     } finally {
       if (mounted) setState(() => _cambiando = false);
@@ -228,14 +240,21 @@ class _PedidoAdminDetalleScreenState extends State<PedidoAdminDetalleScreen> {
                       _InfoRow(
                           label: 'Nombre',
                           value: p.clienteNombre),
-                      if (p.clienteTelefono != null)
-                        _InfoRow(
+                      if (p.clienteTelefono != null &&
+                          p.clienteTelefono!.isNotEmpty)
+                        _PhoneInfoRow(
                             label: 'Teléfono',
-                            value: p.clienteTelefono!),
+                            phone: p.clienteTelefono!),
                       if (p.direccion != null)
                         _InfoRow(
                             label: 'Dirección',
                             value: p.direccion!),
+                      if (p.direccionTelefono != null &&
+                          p.direccionTelefono!.isNotEmpty &&
+                          p.direccionTelefono != p.clienteTelefono)
+                        _PhoneInfoRow(
+                            label: 'Tel. entrega',
+                            phone: p.direccionTelefono!),
                     ],
                   ),
                 ),
@@ -251,8 +270,35 @@ class _PedidoAdminDetalleScreenState extends State<PedidoAdminDetalleScreen> {
                           style: TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 15)),
                       const SizedBox(height: 8),
-                      _InfoRow(label: 'Tamaño', value: p.tamanoNombre),
-                      _InfoRow(label: 'Sabor', value: p.saborNombre),
+                      // Un prediseñado no tiene tamaño ni sabor: es una
+                      // receta cerrada. El admin necesita ver de qué está
+                      // hecha para poder prepararla.
+                      if (p.esPredisenhado) ...[
+                        _InfoRow(label: 'Prediseñado', value: p.saborNombre),
+                        // Vacío solo en prediseñados anteriores a la 0045.
+                        if (p.tamanoNombre.isNotEmpty)
+                          _InfoRow(label: 'Tamaño', value: p.tamanoNombre),
+                        if (p.ingredientes.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          const Text('Incluye',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: _kTeal,
+                                  fontSize: 13)),
+                          const SizedBox(height: 4),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: p.ingredientes
+                                .map((i) => _Chip(label: i))
+                                .toList(),
+                          ),
+                        ],
+                      ] else ...[
+                        _InfoRow(label: 'Tamaño', value: p.tamanoNombre),
+                        _InfoRow(label: 'Sabor', value: p.saborNombre),
+                        _InfoRow(label: 'Dulzura', value: p.dulzura),
+                      ],
                       if (p.frutas.isNotEmpty) ...[
                         const SizedBox(height: 6),
                         const Text('Frutas',
@@ -466,6 +512,56 @@ class _InfoRow extends StatelessWidget {
                     fontWeight: FontWeight.w500, fontSize: 13)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Fila de teléfono tocable: copia el número al portapapeles para que el
+/// admin pueda pegarlo en el marcador del celular y llamar al cliente
+/// durante la entrega. No usamos `url_launcher` (no está en pubspec.yaml)
+/// para evitar agregar una dependencia nueva solo para esto.
+class _PhoneInfoRow extends StatelessWidget {
+  final String label;
+  final String phone;
+  const _PhoneInfoRow({required this.label, required this.phone});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () async {
+        await Clipboard.setData(ClipboardData(text: phone));
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Número copiado: $phone'),
+            backgroundColor: _kSuccess,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 80,
+              child: Text(label,
+                  style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+            ),
+            Expanded(
+              child: Text(phone,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: _kBlue)),
+            ),
+            const Icon(Icons.copy_rounded, size: 15, color: _kBlue),
+          ],
+        ),
       ),
     );
   }

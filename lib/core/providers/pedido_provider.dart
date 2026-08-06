@@ -11,6 +11,9 @@ const int kMaxFrutas = 2;
 /// Máximo 3 extras por pedido personalizado.
 const int kMaxExtras = 3;
 
+/// Objetivo 3: niveles de dulzura disponibles para personalizar el pedido.
+const List<String> kNivelesDulzura = ['Bajo', 'Normal', 'Alto'];
+
 /// Provider del pedido en construcción. Se provee a nivel de
 /// PersonalizadoPage (no global), para que se resetee al salir.
 class PedidoProvider extends ChangeNotifier {
@@ -20,6 +23,7 @@ class PedidoProvider extends ChangeNotifier {
   PedidoLocalModel get state => _state;
   TamanoModel? get tamano => _state.tamano;
   Sabor? get sabor => _state.sabor;
+  String get dulzura => _state.dulzura;
   List<Fruta> get frutas => _state.frutas;
   List<Extra> get extras => _state.extras;
 
@@ -38,6 +42,13 @@ class PedidoProvider extends ChangeNotifier {
   // ── HU_12: seleccionar sabor ─────────────────────────────────────────────
   void selectSabor(Sabor s) {
     _state = _state.copyWith(sabor: s);
+    notifyListeners();
+  }
+
+  // ── Objetivo 3: seleccionar nivel de dulzura ────────────────────────────
+  void selectDulzura(String nivel) {
+    if (!kNivelesDulzura.contains(nivel)) return;
+    _state = _state.copyWith(dulzura: nivel);
     notifyListeners();
   }
 

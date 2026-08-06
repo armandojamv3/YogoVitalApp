@@ -10,6 +10,26 @@ class CalificacionSupabaseException implements Exception {
   String toString() => message;
 }
 
+/// Reseñas de un prediseñado: promedio, total y las más recientes.
+class ResenasPredisenhado {
+  final double promedio;
+  final int total;
+  final List<Map<String, dynamic>> resenas;
+
+  const ResenasPredisenhado({
+    required this.promedio,
+    required this.total,
+    required this.resenas,
+  });
+
+  const ResenasPredisenhado.vacio()
+      : promedio = 0,
+        total = 0,
+        resenas = const [];
+
+  bool get sinCalificaciones => total == 0;
+}
+
 /// Repositorio para HU_CalificarPedido_30 — usa Supabase con RLS.
 class CalificacionSupabaseRepository {
   SupabaseClient get _db => Supabase.instance.client;
@@ -103,6 +123,64 @@ class CalificacionSupabaseRepository {
       return sum / list.length;
     } catch (_) {
       return 0.0;
+    }
+  }
+
+  /// Reseñas de un prediseñado: promedio, total y las [limite] más recientes.
+  ///
+  /// Las calificaciones cuelgan de `pedido_id`, no del producto. Para los
+  /// sabores el vínculo es `pedidos.sabor_id`; para los prediseñados es
+  /// `pedidos.predisenhado_id`, columna añadida en la migración 0043. No
+  /// hace falta ninguna tabla ni columna nueva.
+  ///
+  /// Ojo: solo cuentan los pedidos creados a partir de esa migración. Los
+  /// anteriores no guardaban qué prediseñado se pidió, así que sus
+  /// calificaciones (si las hay) no pueden atribuirse a ninguno.
+  Future<ResenasPredisenhado> getResenasPorPredisenhado(
+    String predisenhadoId, {
+    int limite = 5,
+  }) async {
+    if (predisenhadoId.isEmpty) return const ResenasPredisenhado.vacio();
+    try {
+      final pedidosData = await _db
+          .from('pedidos')
+          .select('id')
+          .eq('predisenhado_id', predisenhadoId);
+
+      final pedidoIds =
+          (pedidosData as List).map((e) => e['id'] as String).toList();
+      if (pedidoIds.isEmpty) return const ResenasPredisenhado.vacio();
+
+      // Todas las estrellas, para el promedio y el conteo real.
+      final todas = await _db
+          .from('calificaciones')
+          .select('estrellas')
+          .inFilter('pedido_id', pedidoIds);
+
+      final listaTodas = todas as List;
+      if (listaTodas.isEmpty) return const ResenasPredisenhado.vacio();
+
+      final suma = listaTodas.fold<double>(
+        0,
+        (acc, e) => acc + ((e['estrellas'] as num).toDouble()),
+      );
+      final promedio = suma / listaTodas.length;
+
+      // Solo las más recientes para mostrar en pantalla.
+      final recientes = await _db
+          .from('calificaciones')
+          .select('estrellas, comentario, created_at')
+          .inFilter('pedido_id', pedidoIds)
+          .order('created_at', ascending: false)
+          .limit(limite);
+
+      return ResenasPredisenhado(
+        promedio: double.parse(promedio.toStringAsFixed(1)),
+        total: listaTodas.length,
+        resenas: (recientes as List).cast<Map<String, dynamic>>(),
+      );
+    } catch (_) {
+      return const ResenasPredisenhado.vacio();
     }
   }
 

@@ -14,6 +14,16 @@ class PedidoHistorial {
   final List<IngredienteDetalle> extras;
   final String? direccionId;
 
+  /// El pedido salió de un prediseñado, no del personalizador.
+  final bool esPredisenhado;
+
+  /// Receta del prediseñado (columna `ingredientes`, lista de textos).
+  ///
+  /// Un prediseñado no genera filas en pedido_frutas/pedido_extras: es un
+  /// producto cerrado y su contenido vive en esa lista. Sin esto el
+  /// historial mostraba solo el nombre, sin decir qué trae dentro.
+  final List<String> ingredientes;
+
   const PedidoHistorial({
     required this.id,
     required this.estadoRaw,
@@ -25,7 +35,14 @@ class PedidoHistorial {
     this.frutas = const [],
     this.extras = const [],
     this.direccionId,
+    this.esPredisenhado = false,
+    this.ingredientes = const [],
   });
+
+  /// Línea de resumen para las tarjetas del listado. Omite lo que esté
+  /// vacío, para no dejar separadores sueltos como "Tropical Explosión · ".
+  String get resumenLinea =>
+      [saborNombre, tamanoNombre].where((s) => s.isNotEmpty).join(' · ');
 
   EstadoPedido get estado => EstadoPedidoExtension.fromString(estadoRaw);
 
@@ -35,6 +52,19 @@ class PedidoHistorial {
   factory PedidoHistorial.fromSupabaseRow(Map<String, dynamic> row) {
     final saborMap = row['sabores'] as Map<String, dynamic>? ?? {};
     final tamanoMap = row['tamanos_yogur'] as Map<String, dynamic>? ?? {};
+
+    // Un pedido de prediseñado no tiene sabor ni tamaño propios (ambos
+    // quedan NULL, ver migración 0043): el producto es el prediseñado
+    // entero. Sin esto el pedido salía en pantalla con el nombre vacío.
+    final predisenhadoMap =
+        row['predisenhados'] as Map<String, dynamic>? ?? {};
+    final nombrePredisenhado = predisenhadoMap['nombre'] as String? ?? '';
+    final esPred = nombrePredisenhado.isNotEmpty;
+
+    final ingredientes = (predisenhadoMap['ingredientes'] as List? ?? [])
+        .map((e) => e.toString())
+        .where((e) => e.isNotEmpty)
+        .toList();
 
     final frutasList = (row['pedido_frutas'] as List? ?? [])
         .map((pf) {
@@ -63,12 +93,18 @@ class PedidoHistorial {
       estadoRaw: row['estado'] as String? ?? 'Desconocido',
       total: _parseDouble(row['total']),
       createdAt: _parseDate(row['created_at']),
-      saborNombre: saborMap['nombre'] as String? ?? '',
+      saborNombre:
+          esPred ? nombrePredisenhado : (saborMap['nombre'] as String? ?? ''),
+      // Desde la migración 0045 un prediseñado también lleva tamaño, así
+      // que se lee igual en los dos casos. Queda vacío solo en los pedidos
+      // de prediseñado anteriores a esa migración, que no eligieron uno.
       tamanoNombre: tamanoMap['nombre'] as String? ?? '',
       tamanoPrice: _parseDouble(tamanoMap['precio']),
       frutas: frutasList,
       extras: extrasList,
       direccionId: row['direccion_id']?.toString(),
+      esPredisenhado: esPred,
+      ingredientes: ingredientes,
     );
   }
 

@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yogo_vital_app/core/models/cart_model.dart';
@@ -24,11 +23,12 @@ class _CartPageState extends State<CartPage> {
       backgroundColor: const Color(0xFFF0F2F4),
       appBar: AppBar(
         backgroundColor: const Color(0xFF5B9EF5),
+        foregroundColor: Colors.white,
         elevation: 4,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        // Sin `leading` explícito: AppBar ya muestra la flecha de volver
+        // automáticamente solo cuando Navigator.canPop(context) es true
+        // (es decir, cuando se llegó aquí empujando esta pantalla desde
+        // otra, no cuando se abrió desde la barra inferior).
         title: Row(
           children: [
             Image.asset(
@@ -232,15 +232,18 @@ class _CartItemRow extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(6),
               child: it.image.startsWith('http')
-                  ? CachedNetworkImage(
-                      imageUrl: it.image,
+                  ? Image.network(
+                      it.image,
                       fit: BoxFit.contain,
-                      placeholder: (_, __) => const Icon(
-                        Icons.icecream,
-                        size: 36,
-                        color: Colors.orange,
-                      ),
-                      errorWidget: (_, __, ___) => const Icon(
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) return child;
+                        return const Icon(
+                          Icons.icecream,
+                          size: 36,
+                          color: Colors.orange,
+                        );
+                      },
+                      errorBuilder: (_, __, ___) => const Icon(
                         Icons.icecream,
                         size: 36,
                         color: Colors.orange,

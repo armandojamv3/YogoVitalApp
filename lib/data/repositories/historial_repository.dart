@@ -24,7 +24,7 @@ class HistorialRepository {
     try {
       final data = await _db
           .from('pedidos')
-          .select('id, estado, total, created_at, sabores(nombre), tamanos_yogur(nombre)')
+          .select('id, estado, total, created_at, sabores(nombre), tamanos_yogur(nombre), predisenhados(nombre, ingredientes)')
           .eq('cliente_id', _uid)
           .order('created_at', ascending: false);
 
@@ -44,6 +44,7 @@ class HistorialRepository {
           .select('''
             id, estado, total, created_at, direccion_id,
             sabores(nombre),
+            predisenhados(nombre, ingredientes),
             tamanos_yogur(nombre, precio),
             pedido_frutas(frutas(nombre, precio_adicional)),
             pedido_extras(extras(nombre, precio_adicional))

@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -6,6 +5,7 @@ import 'package:yogo_vital_app/core/models/cart_model.dart';
 import 'package:yogo_vital_app/core/models/sabor.dart';
 import 'package:yogo_vital_app/presentation/pages/yogurt/categories/personalizado_page.dart';
 import 'package:yogo_vital_app/presentation/widgets/custom_bottom_nav_bar.dart';
+import 'package:yogo_vital_app/presentation/widgets/favorite_button.dart';
 
 class ProductDetailPage extends StatefulWidget {
   const ProductDetailPage({super.key});
@@ -97,7 +97,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     style: TextStyle(
                         color: Colors.white, fontWeight: FontWeight.w600),
                   ),
-                  const Icon(Icons.search, color: Colors.white),
+                  FavoriteButton(
+                    saborId: args?['saborId']?.toString() ?? '',
+                    size: 20,
+                  ),
                 ],
               ),
             ),
@@ -119,13 +122,16 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(12),
                           child: image.startsWith('http')
-                              ? CachedNetworkImage(
-                                  imageUrl: image,
+                              ? Image.network(
+                                  image,
                                   fit: BoxFit.cover,
                                   height: 200,
                                   width: double.infinity,
-                                  placeholder: (_, __) => _imagePlaceholder(),
-                                  errorWidget: (_, __, ___) =>
+                                  loadingBuilder: (context, child, progress) {
+                                    if (progress == null) return child;
+                                    return _imagePlaceholder();
+                                  },
+                                  errorBuilder: (_, __, ___) =>
                                       _imagePlaceholder(),
                                 )
                               : _imagePlaceholder(),
@@ -208,31 +214,42 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
       child: Row(
         children: [
           Expanded(
-            child: OutlinedButton.icon(
-              onPressed: () => _agregarAlCarrito(args),
-              icon: const Icon(Icons.shopping_cart_outlined, size: 18),
-              label: const Text('Agregar'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF5B9EF5),
-                side: const BorderSide(color: Color(0xFF5B9EF5)),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+            child: SizedBox(
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: () => _agregarAlCarrito(args),
+                icon: const Icon(Icons.shopping_cart_outlined, size: 20),
+                label: const Text('Agregar',
+                    style: TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.w600)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF5B9EF5),
+                  side: const BorderSide(
+                      color: Color(0xFF5B9EF5), width: 1.6),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
               ),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () => _pedirAhora(args),
-              icon: const Icon(Icons.bolt, size: 18, color: Colors.white),
-              label: const Text('Pedir ahora',
-                  style: TextStyle(color: Colors.white)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF5B9EF5),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+            child: SizedBox(
+              height: 48,
+              child: ElevatedButton.icon(
+                onPressed: () => _pedirAhora(args),
+                icon: const Icon(Icons.bolt, size: 20, color: Colors.white),
+                label: const Text('Pedir ahora',
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF5B9EF5),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
               ),
             ),
           ),

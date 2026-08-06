@@ -1,0 +1,47 @@
+# Normalización de finales de línea.
+#
+# Sin este archivo, cada vez que alguien edita en Windows con un editor que
+# guarda en CRLF, Git ve el archivo entero como modificado aunque solo haya
+# cambiado una palabra. Así llegó el repo a tener 95 archivos "modificados"
+# que en realidad no cambiaban nada: android/, ios/, las migraciones
+# antiguas, el README...
+#
+# `text=auto` le dice a Git: guarda siempre LF en el repositorio y convierte
+# a lo que toque en el disco de cada uno. Los diffs vuelven a mostrar solo
+# lo que de verdad cambió.
+#
+# Para aplicarlo a lo que ya está en el repo hace falta correr una vez:
+#     git add --renormalize .
+* text=auto
+
+# Código y configuración: siempre LF, también en el disco. Evita que un
+# script o un archivo de Gradle acabe con finales mezclados.
+*.dart      text eol=lf
+*.sql       text eol=lf
+*.yaml      text eol=lf
+*.yml       text eol=lf
+*.json      text eol=lf
+*.md        text eol=lf
+*.ts        text eol=lf
+*.kts       text eol=lf
+*.gradle    text eol=lf
+*.sh        text eol=lf
+
+# Windows espera CRLF en estos.
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+
+# Binarios: que Git no los toque nunca.
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.pdf       binary
+*.ttf       binary
+*.otf       binary
+*.woff      binary
+*.woff2     binary
+*.wasm      binary
+*.jar       binary
+*.keystore  binary

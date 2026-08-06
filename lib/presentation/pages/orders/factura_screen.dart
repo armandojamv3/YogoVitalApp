@@ -207,10 +207,28 @@ class _FacturaScreenState extends State<FacturaScreen> {
                           style: TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 15)),
                       const SizedBox(height: 12),
-                      _LineItem(
-                          label: 'Tamaño: ${f.tamanoNombre}',
-                          precio: f.tamanoPrice,
-                          fmtCop: fmtCop),
+                      // Un prediseñado es una sola línea con su precio de
+                      // catálogo; no tiene tamaño que cobrar aparte ni
+                      // frutas/extras que desglosar. Antes salía
+                      // "Tamaño: " con $0.
+                      if (f.esPredisenhado) ...[
+                        _LineItem(
+                            label: [
+                              f.saborNombre,
+                              if (f.tamanoNombre.isNotEmpty) f.tamanoNombre,
+                              if (f.cantidad > 1) 'x${f.cantidad}',
+                            ].join(' · '),
+                            precio: f.subtotal,
+                            fmtCop: fmtCop),
+                        ...f.ingredientes.map((i) => _LineItem(
+                            label: '   • $i',
+                            precio: 0,
+                            fmtCop: fmtCop)),
+                      ] else
+                        _LineItem(
+                            label: 'Tamaño: ${f.tamanoNombre}',
+                            precio: f.tamanoPrice,
+                            fmtCop: fmtCop),
                       ...f.frutas.map((fr) => _LineItem(
                           label: '+ Fruta: ${fr.nombre}',
                           precio: fr.precio,

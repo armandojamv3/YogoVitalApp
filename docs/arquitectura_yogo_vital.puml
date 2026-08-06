@@ -1,0 +1,88 @@
+@startuml YogoVital_Arquitectura
+skinparam componentStyle uml2
+skinparam shadowing false
+skinparam defaultFontSize 12
+skinparam wrapWidth 160
+
+package "Cliente Móvil (Flutter)" <<Subsystem>> {
+
+  package "Núcleo / Core" {
+    [Configuración App] as ConfigApp
+    [Constantes] as Constantes
+    [main.dart\n(wiring manual,\nsin contenedor DI)] as Wiring
+    [Rutas] as Rutas
+  }
+
+  package "Capa de Presentación" {
+    [Pantallas / Screens] as Screens
+    [Gestión de Estado\n(Provider / ChangeNotifier)] as StateM
+    [Widgets UI] as WidgetsUI
+  }
+
+  package "Capa de Datos" {
+    [Repositorios\n(Sabores, Pedidos, Auth,\nFavoritos, Promociones,\nNotificaciones, Personalización)] as Repos
+    [Modelos / DTOs] as Modelos
+    [Cliente Supabase\n(paquete supabase_flutter)] as ClienteSupabase
+    [Caché Local\nSQLite (sqflite /\nsqflite_common_ffi_web)] as CacheLocal
+  }
+
+  note right of StateM
+    Flutter Widgets:
+    Material, Layouts,
+    Navegación por rutas
+  end note
+
+  note right of Repos
+    Sin capa de Dominio/Casos de Uso:
+    los repositorios son clases
+    concretas, sin interfaces,
+    llamadas directo desde Provider
+  end note
+
+  Wiring ..> Repos : instancia manualmente
+  Screens --> StateM : escucha
+  Screens --> WidgetsUI : contiene
+  StateM --> Repos : usa
+  Repos --> Modelos : mapea (fromJson)
+  Repos --> ClienteSupabase : invoca
+  Repos --> CacheLocal : cachea catálogo\n(solo lectura, offline-first)
+}
+
+package "Backend (Supabase BaaS)" <<Subsystem>> {
+
+  package "Capa de Autenticación" {
+    [Auth Service\n(GoTrue)] as Auth
+    [JWT Tokens] as JWT
+    [OAuth Google] as OAuthG
+  }
+
+  package "APIs de Datos" {
+    [PostgREST\n(REST autogenerado)] as PostgREST
+    [Realtime Engine\n(WebSocket)] as Realtime
+    [Storage Service\n(bucket sabores)] as Storage
+    [Políticas RLS] as RLS
+  }
+
+  package "Edge Functions (Deno)" {
+    [send-notification\n(legado / no usado\nen el flujo real)] as EdgeFn
+  }
+
+  database "PostgreSQL\n16 tablas + RLS" as DB
+
+  Auth --> JWT : emite
+  Auth --> OAuthG : valida
+  Auth --> DB : consulta / crea\n"usuarios"
+
+  PostgREST --> RLS : aplica
+  RLS --> DB
+  Realtime --> DB : postgres_changes
+  Storage --> DB : metadata de archivos
+}
+
+ClienteSupabase ..> PostgREST : HTTPS / JSON\n(CRUD sabores, pedidos,\nfavoritos, promociones...)
+ClienteSupabase ..> Realtime : WSS\n(notificaciones, estado\nde pedidos en vivo)
+ClienteSupabase ..> Storage : HTTPS\n(subir/leer fotos de sabores)
+ClienteSupabase ..> Auth : HTTPS + JWT\n(login, registro, OAuth Google)
+Repos ..> EdgeFn : #red;line.dashed;text:red : no se invoca\nen producción
+
+@enduml

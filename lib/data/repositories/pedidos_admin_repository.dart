@@ -34,6 +34,15 @@ class PedidosAdminRepository {
     return _transiciones[estadoActual]?.contains(estadoNuevo) ?? false;
   }
 
+  // Mensajes de la notificación in-app que ve el cliente (mismo texto que
+  // usaba la Edge Function de push, que nunca quedó realmente conectada).
+  static const Map<String, String> _mensajesEstado = {
+    'En preparación': 'Tu yogur está siendo preparado 🍶',
+    'En camino': 'Tu pedido está en camino 🛵',
+    'Entregado': '¡Tu pedido ha llegado! ¡Disfrútalo! 🎉',
+    'Cancelado': 'Tu pedido fue cancelado ❌',
+  };
+
   static List<String> estadosSiguientes(String estadoActual) {
     return _transiciones[estadoActual] ?? [];
   }
@@ -82,9 +91,10 @@ class PedidosAdminRepository {
   Future<List<PedidoAdmin>> _fetchPedidos(
       {DateTime? desde, DateTime? hasta}) async {
     var q = _db.from('pedidos').select('''
-      id, estado, total, created_at, updated_at, cliente_id, direccion_id,
+      id, estado, total, created_at, updated_at, cliente_id, direccion_id, dulzura, cantidad,
       tamanos_yogur(nombre),
-      sabores(nombre)
+      sabores(nombre),
+      predisenhados(nombre, ingredientes)
     ''');
 
     if (desde != null) q = q.gte('created_at', desde.toIso8601String());
@@ -102,29 +112,36 @@ class PedidosAdminRepository {
         .whereType<String>()
         .toSet()
         .toList();
-    final nombres = await _getNombresClientes(clienteIds);
+    final clientes = await _getDatosClientes(clienteIds);
 
-    // Inyecta el nombre en cada fila para que PedidoAdmin.fromRow lo lea
+    // Inyecta nombre + teléfono en cada fila para que PedidoAdmin.fromRow lo lea
     for (final r in rows) {
-      r['usuarios'] = {'nombre': nombres[r['cliente_id']?.toString()]};
+      final info = clientes[r['cliente_id']?.toString()];
+      r['usuarios'] = {
+        'nombre': info?['nombre'],
+        'telefono': info?['telefono'],
+      };
     }
 
     return rows.map(PedidoAdmin.fromRow).toList();
   }
 
-  /// Devuelve un mapa cliente_id -> nombre para la lista de ids dada.
+  /// Devuelve un mapa cliente_id -> {nombre, telefono} para los ids dados.
   /// Lookup separado en lugar de embed `usuarios!cliente_id(...)`, que
   /// dependía de relaciones/RLS frágiles.
-  Future<Map<String, String>> _getNombresClientes(
+  Future<Map<String, Map<String, String?>>> _getDatosClientes(
       List<String> clienteIds) async {
     if (clienteIds.isEmpty) return {};
     final response = await _db
         .from('usuarios')
-        .select('id, nombre')
+        .select('id, nombre, telefono')
         .inFilter('id', clienteIds);
     return {
       for (final row in (response as List))
-        row['id'].toString(): (row['nombre'] as String?) ?? '',
+        row['id'].toString(): {
+          'nombre': row['nombre'] as String?,
+          'telefono': row['telefono'] as String?,
+        },
     };
   }
 
@@ -133,20 +150,21 @@ class PedidosAdminRepository {
   Future<PedidoAdminDetalle> getDetalle(String pedidoId) async {
     try {
       final data = await _db.from('pedidos').select('''
-        id, estado, total, created_at, updated_at, cliente_id, direccion_id,
+        id, estado, total, created_at, updated_at, cliente_id, direccion_id, dulzura, cantidad,
         tamanos_yogur(nombre, precio),
         sabores(nombre),
+        predisenhados(nombre, ingredientes),
         pedido_frutas(frutas(nombre, precio_adicional)),
         pedido_extras(extras(nombre, precio_adicional)),
         historial_estados(id, estado_anterior, estado_nuevo, fecha_cambio),
-        direcciones(direccion, barrio)
+        direcciones(direccion, barrio, telefono)
       ''').eq('id', pedidoId).single();
 
-      // Plan B: lookup separado del nombre del cliente (sin embed de usuarios)
+      // Plan B: lookup separado del nombre/teléfono del cliente (sin embed de usuarios)
       final clienteId = data['cliente_id']?.toString();
       if (clienteId != null && clienteId.isNotEmpty) {
-        final nombres = await _getNombresClientes([clienteId]);
-        data['usuarios'] = {'nombre': nombres[clienteId]};
+        final clientes = await _getDatosClientes([clienteId]);
+        data['usuarios'] = clientes[clienteId] ?? {};
       }
 
       return PedidoAdminDetalle.fromRow(data);
@@ -193,20 +211,65 @@ class PedidosAdminRepository {
     final uid = _uid;
 
     // PASO 1: UPDATE pedido
-    await _db.from('pedidos').update({
-      'estado': estadoNuevo,
-      'updated_at': DateTime.now().toIso8601String(),
-    }).eq('id', pedidoId);
+    try {
+      final rows = await _db
+          .from('pedidos')
+          .update({
+            'estado': estadoNuevo,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', pedidoId)
+          .select('id');
+
+      // Si RLS bloquea el UPDATE sin lanzar excepción (política que no
+      // matchea), Postgrest simplemente devuelve 0 filas afectadas. Sin
+      // este chequeo, eso se veía como "no pasó nada" sin ningún error.
+      if ((rows as List).isEmpty) {
+        throw const PedidoAdminException(
+            'No se pudo actualizar el pedido: no tienes permiso o el pedido ya no existe.');
+      }
+    } on PedidoAdminException {
+      rethrow;
+    } on PostgrestException catch (e) {
+      throw PedidoAdminException('No se pudo actualizar el pedido: ${e.message}');
+    }
 
     // PASO 2: INSERT historial (RNF09 trazabilidad)
-    await _db.from('historial_estados').insert({
-      'pedido_id': pedidoId,
-      'estado_anterior': estadoActual,
-      'estado_nuevo': estadoNuevo,
-      'admin_id': uid,
-    });
+    try {
+      await _db.from('historial_estados').insert({
+        'pedido_id': pedidoId,
+        'estado_anterior': estadoActual,
+        'estado_nuevo': estadoNuevo,
+        'admin_id': uid,
+      });
+    } on PostgrestException catch (e) {
+      // El estado YA cambió (paso 1 exitoso); esto es solo trazabilidad,
+      // así que no lo tratamos como un fallo del cambio de estado, pero sí
+      // lo dejamos visible en el mensaje en vez de tragárnoslo en silencio.
+      throw PedidoAdminException(
+          'El estado se actualizó, pero no se pudo registrar el historial: ${e.message}');
+    }
 
-    // PASO 3: Push notification (best-effort, no falla el flujo principal)
+    // PASO 3: Notificación in-app (Realtime). Es el mecanismo real de
+    // aviso al cliente: no depende de ningún servicio externo.
+    // Esquema real de la tabla: usuario_id/titulo/mensaje/tipo/leida.
+    try {
+      await _db.from('notificaciones').insert({
+        'usuario_id': clienteId,
+        'pedido_id': pedidoId,
+        'titulo': 'Actualización de tu pedido',
+        'mensaje': _mensajesEstado[estadoNuevo] ??
+            'Tu pedido cambió a: $estadoNuevo',
+        'tipo': 'pedido',
+        'leida': false,
+      });
+    } catch (_) {
+      // Best-effort: no interrumpir el cambio de estado si esto falla.
+    }
+
+    // PASO 4: Push notification (best-effort, no falla el flujo principal).
+    // Nota: hoy no llega a ningún lado porque la app no tiene integrado
+    // Firebase/FCM (ver notificaciones in-app arriba, que sí funcionan).
     try {
       await _db.functions.invoke(
         'send-notification',

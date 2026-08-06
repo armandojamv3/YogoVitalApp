@@ -1,0 +1,18 @@
+@startuml Figura5_MetodoPago
+skinparam shadowing false
+skinparam defaultFontSize 12
+
+start
+:Cliente llega a Checkout\n(tras confirmar el resumen del pedido);
+:Selecciona una dirección de entrega\n(direcciones);
+:Selecciona método de pago\n(texto: Efectivo, Tarjeta contra entrega, etc.);
+note right
+  No hay integración con una pasarela
+  de pago real. El método elegido se
+  guarda como texto en pedidos.metodo_pago
+  y se paga físicamente contra entrega.
+end note
+:Confirma el pedido;
+:PedidoSupabaseRepository.createPedido()\ninserta en "pedidos" con estado = 'Recibido';
+stop
+@enduml

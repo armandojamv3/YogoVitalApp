@@ -1,0 +1,25 @@
+@startuml Arquitectura_Capas_YogoVital_Pro
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 18
+skinparam defaultFontName Helvetica
+skinparam rectangle {
+  BorderThickness 2
+  FontSize 14
+}
+skinparam ArrowColor #94A3B8
+skinparam ArrowThickness 2
+skinparam ArrowFontColor #475569
+skinparam ArrowFontSize 12
+skinparam ArrowFontStyle bold
+
+rectangle "**Capa de Presentación**\n<color:#4A5568>Interfaz de usuario y gestión de estado en el dispositivo</color>\n \n<back:white>  Pantallas / Screens  </back>   <back:white>  Widgets UI  </back>   <back:white>  Gestión de Estado (Provider)  </back>   <back:white>  Navegación por rutas  </back>\n \n<i><color:#6B6B7B><size:11>Corre en el dispositivo del usuario (Android, iOS o navegador)</size></color></i>" as Presentacion #EFF6FF;line:5B9EF5
+
+rectangle "**Capa de Datos / Lógica**\n<color:#4A5568>Reglas de negocio y acceso a los datos (sin capa de Dominio separada)</color>\n \n<back:white>  Repositorios (Sabores, Pedidos, Auth, Favoritos...)  </back>   <back:white>  Modelos / DTOs  </back>   <back:white>  Caché Local SQLite  </back>\n \n<i><color:#6B6B7B><size:11>Los repositorios llaman directo a Supabase; no hay interfaces ni casos de uso intermedios</size></color></i>\n<i><color:#6B6B7B><size:11>Corre también en el dispositivo, junto con la Capa de Presentación</size></color></i>" as Datos #FEF9E7;line:E8A33D
+
+rectangle "**Capa de Persistencia Remota**\n<color:#4A5568>Backend gestionado (Supabase) y almacenamiento en la nube</color>\n \n<back:white>  Auth · PostgREST · Realtime · Storage  </back>   <back:white>  PostgreSQL (16 tablas + RLS)  </back>\n \n<i><color:#6B6B7B><size:11>Corre en la nube, fuera del control directo de la app Flutter</size></color></i>" as Persistencia #EAF7EE;line:4CAF7D
+
+Presentacion -[#94A3B8,bold]down-> Datos : depende de
+Datos -[#94A3B8,bold]down-> Persistencia : depende de
+
+@enduml

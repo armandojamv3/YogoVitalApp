@@ -45,5 +45,26 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Yogo Vital necesita acceso a tus fotos para que el administrador pueda subir imágenes de los sabores.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Yogo Vital necesita acceso a la cámara para tomar fotos de los sabores.</string>
+	<!-- Deep link de Supabase. Sin esto iOS no sabe que los enlaces
+	     io.supabase.yogovital:// pertenecen a esta app, así que ni el login
+	     con Google ni los correos de confirmación y recuperación llegaban a
+	     abrirla. En Android ya estaba declarado (AndroidManifest.xml). -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>io.supabase.yogovital</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>io.supabase.yogovital</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

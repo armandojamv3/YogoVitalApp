@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -168,72 +167,7 @@ class _PersonalizadoContentState extends State<_PersonalizadoContent> {
           const CustomBottomNavBar(currentIndex: 1),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _sectionCard(
-              number: '1',
-              title: 'Selecciona el Tamaño',
-              subtitle: 'El precio base depende del tamaño',
-              child: _tamanos.isEmpty
-                  ? _emptySection('No hay tamaños disponibles')
-                  : _buildTamanosGrid(pedido),
-            ),
-            const SizedBox(height: 16),
-            _sectionCard(
-              number: '2',
-              title: 'Elige tu Sabor Base',
-              subtitle: 'Toca una opción para ver su descripción',
-              child: _buildSaboresList(pedido),
-            ),
-            const SizedBox(height: 16),
-            _sectionCard(
-              number: '3',
-              title: 'Agrega Frutas',
-              subtitle: 'Máximo $kMaxFrutas frutas',
-              badgeText: '${pedido.frutas.length}/$kMaxFrutas',
-              child: _frutas.isEmpty
-                  ? _emptySection('No hay frutas disponibles')
-                  : _buildIngredientesList(
-                      items: _frutas
-                          .map((f) => _IngredienteItem(
-                                id: f.id,
-                                nombre: f.nombre,
-                                precio: f.precioAdicional,
-                                imagenUrl: f.imagenUrl,
-                                isSelected: pedido.isFrutaSelectedById(f.id),
-                                onToggle: () => _onToggleFruta(f, pedido),
-                              ))
-                          .toList(),
-                    ),
-            ),
-            const SizedBox(height: 16),
-            _sectionCard(
-              number: '4',
-              title: 'Agrega Extras',
-              subtitle: 'Máximo $kMaxExtras extras',
-              badgeText: '${pedido.extras.length}/$kMaxExtras',
-              child: _extras.isEmpty
-                  ? _emptySection('No hay extras disponibles')
-                  : _buildIngredientesList(
-                      items: _extras
-                          .map((e) => _IngredienteItem(
-                                id: e.id,
-                                nombre: e.nombre,
-                                precio: e.precioAdicional,
-                                imagenUrl: e.imagenUrl,
-                                isSelected: pedido.isExtraSelectedById(e.id),
-                                onToggle: () => _onToggleExtra(e, pedido),
-                              ))
-                          .toList(),
-                    ),
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
+      body: _buildBodyContent(pedido),
     );
   }
 
@@ -276,7 +210,7 @@ class _PersonalizadoContentState extends State<_PersonalizadoContent> {
     );
   }
 
-  // ── 4 secciones de personalización ───────────────────────────────────────
+  // ── 5 secciones de personalización ───────────────────────────────────────
   Widget _buildScrollContent(PedidoProvider pedido) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -306,9 +240,19 @@ class _PersonalizadoContentState extends State<_PersonalizadoContent> {
 
           const SizedBox(height: 16),
 
-          // Sección 3: Frutas
+          // Sección 3: Nivel de dulzura
           _sectionCard(
             number: '3',
+            title: 'Nivel de Dulzura',
+            subtitle: 'Elige qué tan dulce quieres tu yogur',
+            child: _buildDulzuraSelector(pedido),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Sección 4: Frutas
+          _sectionCard(
+            number: '4',
             title: 'Agrega Frutas',
             subtitle: 'Máximo $kMaxFrutas frutas',
             badgeText: '${pedido.frutas.length}/$kMaxFrutas',
@@ -330,11 +274,12 @@ class _PersonalizadoContentState extends State<_PersonalizadoContent> {
 
           const SizedBox(height: 16),
 
-          // Sección 4: Extras
+          // Sección 5: Extras
           _sectionCard(
-            number: '4',
+            number: '5',
             title: 'Agrega Extras',
-            subtitle: 'Sin límite de extras',
+            subtitle: 'Máximo $kMaxExtras extras',
+            badgeText: '${pedido.extras.length}/$kMaxExtras',
             child: _extras.isEmpty
                 ? _emptySection('No hay extras disponibles')
                 : _buildIngredientesList(
@@ -345,7 +290,7 @@ class _PersonalizadoContentState extends State<_PersonalizadoContent> {
                               precio: e.precioAdicional,
                               imagenUrl: e.imagenUrl,
                               isSelected: pedido.isExtraSelectedById(e.id),
-                              onToggle: () => pedido.toggleExtra(e),
+                              onToggle: () => _onToggleExtra(e, pedido),
                             ))
                         .toList(),
                   ),
@@ -354,6 +299,43 @@ class _PersonalizadoContentState extends State<_PersonalizadoContent> {
           const SizedBox(height: 20),
       ],
     ),
+    );
+  }
+
+  // ── Selector de nivel de dulzura (Objetivo 3: niveles de dulzura) ────────
+  Widget _buildDulzuraSelector(PedidoProvider pedido) {
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: kNivelesDulzura.map((nivel) {
+        final selected = pedido.dulzura == nivel;
+        return GestureDetector(
+          onTap: () => pedido.selectDulzura(nivel),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: selected ? const Color(0xFF5B9EF5) : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: selected
+                    ? const Color(0xFF5B9EF5)
+                    : Colors.grey[300]!,
+                width: selected ? 2 : 1,
+              ),
+            ),
+            child: Text(
+              nivel,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                color: selected ? Colors.white : Colors.black87,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -497,17 +479,20 @@ class _PersonalizadoContentState extends State<_PersonalizadoContent> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: s.imagenUrl != null
-                          ? CachedNetworkImage(
-                              imageUrl: s.imagenUrl!,
+                          ? Image.network(
+                              s.imagenUrl!,
                               width: 48,
                               height: 48,
                               fit: BoxFit.cover,
-                              placeholder: (_, __) => Container(
-                                width: 48,
-                                height: 48,
-                                color: Colors.orange[50],
-                              ),
-                              errorWidget: (_, __, ___) =>
+                              loadingBuilder: (context, child, progress) {
+                                if (progress == null) return child;
+                                return Container(
+                                  width: 48,
+                                  height: 48,
+                                  color: Colors.orange[50],
+                                );
+                              },
+                              errorBuilder: (_, __, ___) =>
                                   _saborPlaceholder(),
                             )
                           : _saborPlaceholder(),
@@ -651,15 +636,17 @@ class _PersonalizadoContentState extends State<_PersonalizadoContent> {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(6),
                   child: item.imagenUrl != null
-                      ? CachedNetworkImage(
-                          imageUrl: item.imagenUrl!,
+                      ? Image.network(
+                          item.imagenUrl!,
                           width: 40,
                           height: 40,
                           fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) =>
+                          errorBuilder: (_, __, ___) =>
                               _ingredientePlaceholder(),
-                          placeholder: (_, __) =>
-                              _ingredientePlaceholder(),
+                          loadingBuilder: (context, child, progress) {
+                            if (progress == null) return child;
+                            return _ingredientePlaceholder();
+                          },
                         )
                       : _ingredientePlaceholder(),
                 ),

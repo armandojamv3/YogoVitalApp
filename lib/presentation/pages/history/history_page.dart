@@ -78,10 +78,17 @@ class _HistoryPageState extends State<HistoryPage> {
       decoration: const BoxDecoration(color: Color(0xFF5B9EF5)),
       child: Row(
         children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
+          // Solo si se llegó empujando esta pantalla desde otra (p. ej.
+          // desde "Mis Pedidos" en Cuenta o desde Estado del pedido).
+          // Si se abrió desde la barra inferior no hay nada a lo cual
+          // volver, así que no se muestra.
+          if (Navigator.canPop(context))
+            IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            )
+          else
+            const SizedBox(width: 48),
           const Text(
             'Mis Pedidos',
             style: TextStyle(
@@ -204,9 +211,9 @@ class _PedidoCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      pedido.saborNombre.isNotEmpty
-                          ? '${pedido.saborNombre} · ${pedido.tamanoNombre}'
-                          : pedido.tamanoNombre,
+                      // resumenLinea omite lo vacío: un prediseñado no
+                      // tiene tamaño, y antes quedaba un "·" colgando.
+                      pedido.resumenLinea,
                       style: TextStyle(color: Colors.grey[600], fontSize: 13),
                     ),
                     const SizedBox(height: 6),

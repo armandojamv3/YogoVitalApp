@@ -1,0 +1,45 @@
+@startuml YogoVital_Arquitectura_Fisica
+skinparam shadowing false
+skinparam defaultFontSize 12
+skinparam wrapWidth 160
+
+
+node "Dispositivo del Usuario\n(Android / iOS / Navegador Web)" as Device {
+  artifact "App Flutter\n(Yogo Vital)" as App
+  database "Caché Local SQLite\n(solo catálogo, offline-first)" as LocalDB
+  App --> LocalDB : lee / escribe
+}
+
+cloud "Supabase Cloud\n(Backend-as-a-Service gestionado)" as SupabaseCloud {
+  component "GoTrue\n(Auth Service)" as Auth
+  component "PostgREST\n(API REST autogenerada)" as PostgREST
+  component "Realtime Engine\n(WebSocket)" as Realtime
+  component "Storage Service\n(imágenes de sabores)" as Storage
+  component "Edge Functions (Deno)\nsend-notification\n(legado, no usada)" as EdgeFn
+  database "PostgreSQL\n16 tablas + RLS" as DB
+
+  Auth --> DB : consulta / crea "usuarios"
+  PostgREST --> DB
+  Realtime --> DB : postgres_changes
+  Storage --> DB : metadata de archivos
+  EdgeFn ..> DB
+}
+
+node "Google\n(proveedor OAuth externo)" as Google
+
+App --> Auth : HTTPS + JWT\n(login, registro)
+App --> PostgREST : HTTPS / JSON\n(CRUD sabores, pedidos,\nfavoritos, promociones...)
+App --> Realtime : WSS\n(pedidos y notificaciones\nen vivo)
+App --> Storage : HTTPS\n(subir/leer fotos de sabores)
+Auth --> Google : OAuth redirect\n(login con Google)
+
+note bottom of SupabaseCloud
+  No existen en este proyecto:
+  servidores propios, microservicios,
+  API Gateway, Redis, pasarela de pago
+  ni proveedor de Email/SMS.
+  Todo corre dentro de la plataforma
+  gestionada de Supabase (un solo backend).
+end note
+
+@enduml

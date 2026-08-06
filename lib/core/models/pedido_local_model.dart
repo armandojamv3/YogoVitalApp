@@ -7,12 +7,14 @@ import 'package:yogo_vital_app/core/models/tamano_model.dart';
 class PedidoLocalModel {
   final TamanoModel? tamano;
   final Sabor? sabor;
+  final String dulzura;
   final List<Fruta> frutas;
   final List<Extra> extras;
 
   const PedidoLocalModel({
     this.tamano,
     this.sabor,
+    this.dulzura = 'Normal',
     this.frutas = const [],
     this.extras = const [],
   });
@@ -30,12 +32,14 @@ class PedidoLocalModel {
   PedidoLocalModel copyWith({
     TamanoModel? tamano,
     Sabor? sabor,
+    String? dulzura,
     List<Fruta>? frutas,
     List<Extra>? extras,
   }) =>
       PedidoLocalModel(
         tamano: tamano ?? this.tamano,
         sabor: sabor ?? this.sabor,
+        dulzura: dulzura ?? this.dulzura,
         frutas: frutas ?? this.frutas,
         extras: extras ?? this.extras,
       );

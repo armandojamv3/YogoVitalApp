@@ -142,8 +142,26 @@ class PdfService {
               align: pw.TextAlign.right),
         ],
       ),
-      // Tamaño
-      _itemRow('Tamaño: ${f.tamanoNombre}', f.tamanoPrice, isEven: false),
+      // Producto: un prediseñado va como una sola línea con su precio de
+      // catálogo (no tiene tamaño que cobrar aparte); el resto desglosa el
+      // tamaño y luego los ingredientes añadidos.
+      if (f.esPredisenhado)
+        _itemRow(
+          [
+            f.saborNombre,
+            if (f.tamanoNombre.isNotEmpty) f.tamanoNombre,
+            if (f.cantidad > 1) 'x${f.cantidad}',
+          ].join(' · '),
+          f.subtotal,
+          isEven: false,
+        )
+      else
+        _itemRow('Tamaño: ${f.tamanoNombre}', f.tamanoPrice, isEven: false),
+      // Ingredientes del prediseñado, sin precio propio
+      if (f.esPredisenhado)
+        ...f.ingredientes.asMap().entries.map(
+              (e) => _itemRow('   • ${e.value}', 0, isEven: e.key.isEven),
+            ),
       // Frutas
       ...f.frutas.asMap().entries.map(
             (e) => _itemRow(

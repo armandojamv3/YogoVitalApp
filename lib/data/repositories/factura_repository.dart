@@ -24,9 +24,10 @@ class FacturaRepository {
       final data = await _db
           .from('pedidos')
           .select('''
-            id, total, created_at, estado,
+            id, total, created_at, estado, cantidad, costo_envio,
             tamanos_yogur(nombre, precio),
             sabores(nombre),
+            predisenhados(nombre, ingredientes),
             pedido_frutas(frutas(nombre, precio_adicional)),
             pedido_extras(extras(nombre, precio_adicional))
           ''')

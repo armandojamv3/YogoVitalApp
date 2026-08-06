@@ -44,6 +44,14 @@ dependencies:
   printing: ^5.12.0
   share_plus: ^13.0.0
 
+  # Base de datos local (caché de catálogo, offline-first)
+  sqflite: ^2.4.2
+  sqflite_common_ffi_web: ">=1.1.0 <1.1.2" # 1.1.2 requiere Dart 3.12
+  path: ^1.9.0
+
+  # Subida de fotos (sabores) a Supabase Storage
+  image_picker: ^1.1.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

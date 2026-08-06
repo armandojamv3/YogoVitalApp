@@ -1,0 +1,25 @@
+@startuml Figura6_CambioEstadoAdmin
+skinparam shadowing false
+skinparam defaultFontSize 12
+
+start
+:Administrador abre "Pedidos" en el Panel Admin;
+:Selecciona un pedido de la lista;
+:Ve el detalle (cliente, dirección, sabor,\ntamaño, dulzura, frutas, extras, total);
+if (¿Estado actual permite transición?) then (sí)
+  :Elige el nuevo estado válido\n(Recibido -> En preparación -> En camino -> Entregado\no Recibido -> Cancelado);
+  :PedidosAdminRepository.cambiarEstado();
+  fork
+    :UPDATE pedidos.estado;
+  fork again
+    :INSERT en historial_estados\n(estado_anterior, estado_nuevo, admin_id);
+  fork again
+    :INSERT en notificaciones\n(mensaje según nuevo estado);
+  end fork
+  :Supabase Realtime emite el cambio;
+  :Cliente ve el nuevo estado en vivo\nen "Estado del pedido" + campana de notificaciones;
+else (no)
+  :No se muestran estados fuera\nde la transición permitida;
+endif
+stop
+@enduml

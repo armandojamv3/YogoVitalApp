@@ -82,11 +82,29 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   ),
                   const SizedBox(height: 14),
                   _ModuleCard(
+                    icon: Icons.auto_awesome_rounded,
+                    title: 'Prediseñados',
+                    subtitle: 'Crear y editar combos de yogur prediseñados',
+                    color: const Color(0xFF7E57C2),
+                    onTap: () =>
+                        Navigator.pushNamed(context, '/admin/predisenhados'),
+                  ),
+                  const SizedBox(height: 14),
+                  _ModuleCard(
                     icon: Icons.receipt_long_rounded,
                     title: 'Pedidos',
                     subtitle: 'Ver y actualizar estado de pedidos',
                     color: const Color(0xFF9C27B0),
                     onTap: () => Navigator.pushNamed(context, '/admin'),
+                  ),
+                  const SizedBox(height: 14),
+                  _ModuleCard(
+                    icon: Icons.local_offer_rounded,
+                    title: 'Promociones',
+                    subtitle: 'Publicar y gestionar promociones para clientes',
+                    color: const Color(0xFFFF9800),
+                    onTap: () =>
+                        Navigator.pushNamed(context, '/admin/promociones'),
                   ),
                 ],
               ),

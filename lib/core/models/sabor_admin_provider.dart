@@ -51,6 +51,7 @@ class SaborAdminProvider extends ChangeNotifier {
     required String nombre,
     required String descripcion,
     required double precioBase,
+    String? imagenUrl,
   }) async {
     _setFormState(SaborFormState.saving);
     try {
@@ -58,6 +59,7 @@ class SaborAdminProvider extends ChangeNotifier {
         nombre: nombre,
         descripcion: descripcion,
         precioBase: precioBase,
+        imagenUrl: imagenUrl,
       );
       _sabores = [nuevo, ..._sabores];
       _formSuccess = "Sabor '$nombre' agregado correctamente";
@@ -79,6 +81,7 @@ class SaborAdminProvider extends ChangeNotifier {
     required String nombre,
     required String descripcion,
     required double precioBase,
+    String? imagenUrl,
   }) async {
     _setFormState(SaborFormState.saving);
     try {
@@ -87,6 +90,7 @@ class SaborAdminProvider extends ChangeNotifier {
         nombre: nombre,
         descripcion: descripcion,
         precioBase: precioBase,
+        imagenUrl: imagenUrl,
       );
       _sabores = _sabores.map((s) => s.id == id ? actualizado : s).toList();
       _formSuccess = 'Sabor actualizado correctamente';

@@ -59,7 +59,25 @@ class PedidoSupabaseRepository {
 
   // ── Pedidos ──────────────────────────────────────────────────────────────
 
-  /// HU_21: confirmar pedido — inserta pedido + ingredientes + historial
+  /// HU_21: confirmar pedido personalizado.
+  ///
+  /// Delega en la RPC `crear_pedido` (migración 0043). Antes esto eran 4
+  /// INSERT sueltos (pedidos → pedido_frutas → pedido_extras →
+  /// historial_estados), lo que causaba dos problemas:
+  ///
+  ///  * Desde la migración 0041, el total se guardaba SIN frutas ni extras.
+  ///    El trigger BEFORE INSERT los suma leyendo pedido_frutas/pedido_extras,
+  ///    que en ese instante siguen vacías. La 0035 lo compensaba tocando la
+  ///    fila del pedido después de insertar los ingredientes, pero la 0041
+  ///    limitó ese recálculo a los UPDATE que cambian `tamano_id` — y el
+  ///    "toque" no cambia tamano_id, así que dejó de funcionar.
+  ///  * Si fallaba cualquiera de los INSERT posteriores, el pedido quedaba
+  ///    huérfano (sin ingredientes o sin historial).
+  ///
+  /// La RPC hace todo en una sola transacción y calcula el total leyendo
+  /// los precios del catálogo. [PedidoLocalModel.total] sigue existiendo,
+  /// pero ya solo sirve para mostrar el precio en la UI: el importe real
+  /// lo decide el servidor.
   Future<String> createPedido({
     required PedidoLocalModel pedidoLocal,
     required String direccionId,
@@ -68,77 +86,77 @@ class PedidoSupabaseRepository {
     if (metodoPago.isEmpty) {
       throw Exception('Método de pago es obligatorio');
     }
-
-    final uid = _uid;
-
-    // 1. INSERT pedido
-    final pedidoRow = await _db.from('pedidos').insert({
-      'cliente_id': uid,
-      'direccion_id': direccionId,
-      'tamano_id': pedidoLocal.tamano!.id,
-      'sabor_id': pedidoLocal.sabor!.id,
-      'estado': 'Recibido',
-      'total': pedidoLocal.total,
-      'metodo_pago': metodoPago, // Siempre se inserta
-    }).select().single();
-
-    final pedidoId = pedidoRow['id'] as String;
-
-    // 2. INSERT pedido_frutas
-    if (pedidoLocal.frutas.isNotEmpty) {
-      await _db.from('pedido_frutas').insert(
-        pedidoLocal.frutas
-            .map((f) => {'pedido_id': pedidoId, 'fruta_id': f.id})
-            .toList(),
-      );
+    if (pedidoLocal.tamano == null) {
+      throw Exception('Debes elegir un tamaño');
+    }
+    if (pedidoLocal.sabor == null) {
+      throw Exception('Debes elegir un sabor');
     }
 
-    // 3. INSERT pedido_extras
-    if (pedidoLocal.extras.isNotEmpty) {
-      await _db.from('pedido_extras').insert(
-        pedidoLocal.extras
-            .map((e) => {'pedido_id': pedidoId, 'extra_id': e.id})
-            .toList(),
-      );
-    }
-
-    // 4. INSERT historial_estados (primer estado)
-    await _db.from('historial_estados').insert({
-      'pedido_id': pedidoId,
-      'estado_nuevo': 'Recibido',
+    final id = await _db.rpc('crear_pedido', params: {
+      'p_direccion_id': direccionId,
+      'p_metodo_pago': metodoPago,
+      'p_tamano_id': pedidoLocal.tamano!.id,
+      'p_sabor_id': pedidoLocal.sabor!.id,
+      'p_dulzura': pedidoLocal.dulzura,
+      'p_frutas': pedidoLocal.frutas.map((f) => f.id).toList(),
+      'p_extras': pedidoLocal.extras.map((e) => e.id).toList(),
     });
 
+    final pedidoId = id?.toString() ?? '';
+    if (pedidoId.isEmpty) {
+      throw Exception('No se pudo crear el pedido');
+    }
     return pedidoId;
   }
 
-  /// Crea un pedido desde el carrito (sin tamano_id obligatorio).
-  /// Requiere que tamano_id sea nullable en la BD.
-  Future<String> createPedidoFromCartItem({
+  /// Crea un pedido a partir de un ítem del carrito.
+  ///
+  /// Un ítem del carrito es o bien un **prediseñado** ([predisenhadoId]) o
+  /// bien un **sabor suelto** ([saborId]) — nunca los dos. El precio ya no
+  /// viaja desde la app: la RPC lo lee del catálogo (`predisenhados.precio_total`
+  /// o `sabores.precio_base`) y lo multiplica por [cantidad]. Antes se
+  /// insertaba el total tal cual lo mandaba el cliente, así que era posible
+  /// crear un pedido con total 0.
+  Future<String> createPedidoDesdeCarrito({
     String? saborId,
+    String? predisenhadoId,
+    String? tamanoId,
     required String direccionId,
-    required double total,
     required String metodoPago,
+    int cantidad = 1,
   }) async {
     if (metodoPago.isEmpty) {
       throw Exception('Método de pago es obligatorio');
     }
+    final esPredisenhado =
+        predisenhadoId != null && predisenhadoId.isNotEmpty;
 
-    final pedidoRow = await _db.from('pedidos').insert({
-      'cliente_id': _uid,
-      'direccion_id': direccionId,
-      if (saborId != null && saborId.isNotEmpty) 'sabor_id': saborId,
-      'estado': 'Recibido',
-      'total': total,
-      'metodo_pago': metodoPago, // Siempre se inserta
-    }).select().single();
+    if (!esPredisenhado && (saborId == null || saborId.isEmpty)) {
+      throw Exception('El ítem del carrito no tiene sabor ni prediseñado');
+    }
+    // Desde la migración 0045 el tamaño es obligatorio en un prediseñado:
+    // el precio es la receta más el tamaño. Se comprueba aquí para dar un
+    // mensaje claro en vez de dejar que reviente la RPC.
+    if (esPredisenhado && (tamanoId == null || tamanoId.isEmpty)) {
+      throw Exception('Debes elegir un tamaño para el prediseñado');
+    }
 
-    final pedidoId = pedidoRow['id'] as String;
-
-    await _db.from('historial_estados').insert({
-      'pedido_id': pedidoId,
-      'estado_nuevo': 'Recibido',
+    final id = await _db.rpc('crear_pedido', params: {
+      'p_direccion_id': direccionId,
+      'p_metodo_pago': metodoPago,
+      if (esPredisenhado)
+        'p_predisenhado_id': predisenhadoId
+      else
+        'p_sabor_id': saborId,
+      if (tamanoId != null && tamanoId.isNotEmpty) 'p_tamano_id': tamanoId,
+      'p_cantidad': cantidad,
     });
 
+    final pedidoId = id?.toString() ?? '';
+    if (pedidoId.isEmpty) {
+      throw Exception('No se pudo crear el pedido');
+    }
     return pedidoId;
   }
 
