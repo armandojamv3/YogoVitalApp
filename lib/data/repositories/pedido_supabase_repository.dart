@@ -172,36 +172,28 @@ class PedidoSupabaseRepository {
         });
   }
 
-  /// HU_23: cancelar pedido solo si estado == 'Recibido'
+  /// HU_23: cancelar pedido, solo si sigue en 'Recibido'.
+  ///
+  /// Delega en la RPC `cancelar_pedido` (migración 0047). Antes eran tres
+  /// operaciones sueltas —comprobar el estado, actualizar el pedido,
+  /// escribir el historial— con tres problemas:
+  ///
+  ///  * Nadie avisaba al administrador. Podía estar preparando un yogur ya
+  ///    cancelado.
+  ///  * No era atómico: si fallaba el historial, el pedido quedaba
+  ///    cancelado sin rastro de cuándo.
+  ///  * Entre la comprobación y el UPDATE, el admin podía mover el pedido a
+  ///    'En preparación'. La RPC bloquea la fila mientras decide, así que
+  ///    esa carrera ya no existe.
+  ///
+  /// Los mensajes de error vienen de la función y ya son legibles para el
+  /// usuario, así que se reenvían tal cual.
   Future<void> cancelarPedido(String pedidoId) async {
-    final uid = _uid;
-
-    // Verificar estado actual
-    final row = await _db
-        .from('pedidos')
-        .select('estado')
-        .eq('id', pedidoId)
-        .eq('cliente_id', uid)
-        .single();
-
-    final estadoActual = row['estado'] as String;
-    if (estadoActual != 'Recibido') {
-      throw const _PedidoException(
-        'Este pedido ya está en proceso y no puede ser cancelado.',
-      );
+    try {
+      await _db.rpc('cancelar_pedido', params: {'p_pedido_id': pedidoId});
+    } on PostgrestException catch (e) {
+      throw _PedidoException(e.message);
     }
-
-    await _db
-        .from('pedidos')
-        .update({'estado': 'Cancelado', 'updated_at': DateTime.now().toIso8601String()})
-        .eq('id', pedidoId)
-        .eq('cliente_id', uid);
-
-    await _db.from('historial_estados').insert({
-      'pedido_id': pedidoId,
-      'estado_anterior': 'Recibido',
-      'estado_nuevo': 'Cancelado',
-    });
   }
 
   /// HU_28 (historial): pedidos del cliente ordenados por fecha

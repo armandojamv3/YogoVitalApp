@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:yogo_vital_app/core/models/pedido.dart';
 import 'package:yogo_vital_app/core/models/pedido_admin.dart';
 import 'package:yogo_vital_app/core/services/user_role_service.dart';
 import 'package:yogo_vital_app/data/repositories/pedidos_admin_repository.dart';
 import 'package:yogo_vital_app/presentation/pages/admin/pedido_admin_detalle_screen.dart';
+import 'package:yogo_vital_app/presentation/widgets/notification_bell.dart';
 
 const _kBlue = Color(0xFF5B9EF5);
 const _kBg = Color(0xFFF5F7FA);
@@ -26,6 +28,18 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
   DateTime? _hasta;
   Stream<List<PedidoAdmin>>? _stream;
   Map<String, int> _contadores = {};
+
+  /// Ids de pedidos ya vistos en esta sesión de pantalla.
+  ///
+  /// El stream de Realtime reemite la lista entera en cada cambio, no solo
+  /// lo que cambió. Para saber qué es realmente nuevo hay que compararlo
+  /// con lo que ya se había visto.
+  final Set<String> _pedidosVistos = {};
+
+  /// La primera emisión trae todos los pedidos existentes. Sin esta
+  /// bandera sonaría la alarma al abrir la pantalla, como si acabaran de
+  /// entrar cincuenta pedidos.
+  bool _primeraCarga = true;
 
   @override
   void initState() {
@@ -94,6 +108,69 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
     _aplicarFiltro();
   }
 
+  /// Avisa cuando entran pedidos nuevos con la pantalla abierta.
+  ///
+  /// La lista ya se actualizaba sola por Realtime, pero en silencio: si
+  /// nadie estaba mirando el celular en ese momento, el pedido pasaba
+  /// desapercibido. En un mostrador con una tablet, este sonido es lo que
+  /// hace que alguien levante la vista.
+  ///
+  /// Se llama desde el builder del StreamBuilder, así que no puede tocar
+  /// setState directamente — de ahí el addPostFrameCallback.
+  void _detectarPedidosNuevos(List<PedidoAdmin> pedidos) {
+    final nuevos = pedidos
+        .where((p) => p.estadoRaw == 'Recibido')
+        .where((p) => !_pedidosVistos.contains(p.id))
+        .toList();
+
+    _pedidosVistos.addAll(pedidos.map((p) => p.id));
+
+    // Al abrir la pantalla todo es "nuevo": solo se registra, no se avisa.
+    if (_primeraCarga) {
+      _primeraCarga = false;
+      return;
+    }
+    if (nuevos.isEmpty) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      // SystemSound y HapticFeedback vienen con Flutter, sin dependencias.
+      // En Android e iOS suenan y vibran; en web el navegador los ignora,
+      // así que ahí solo queda el aviso visual. Si más adelante hace falta
+      // un sonido más audible (un mostrador ruidoso), habría que añadir el
+      // paquete audioplayers y un archivo de audio propio.
+      SystemSound.play(SystemSoundType.alert);
+      HapticFeedback.heavyImpact();
+
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.notifications_active, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  nuevos.length == 1
+                      ? 'Nuevo pedido de ${nuevos.first.clienteNombre}'
+                      : '${nuevos.length} pedidos nuevos',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600, color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF2E7D32),
+          duration: const Duration(seconds: 6),
+        ),
+      );
+
+      _loadContadores();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_checking) {
@@ -123,6 +200,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                     return _buildError(snap.error.toString());
                   }
                   final pedidos = snap.data ?? [];
+                  if (snap.hasData) _detectarPedidosNuevos(pedidos);
                   if (pedidos.isEmpty) return _buildEmpty();
                   return RefreshIndicator(
                     color: _kBlue,
@@ -185,6 +263,12 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
               ),
             ),
           ),
+          // Desde la migración 0046 los administradores también reciben
+          // notificaciones: una por cada pedido nuevo. La campana es la
+          // misma del cliente, y aquí sirve para ver los pedidos que
+          // entraron mientras la app estuvo cerrada — el Realtime de la
+          // lista solo avisa a quien está mirando en ese momento.
+          const NotificationBell(),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(

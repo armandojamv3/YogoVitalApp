@@ -19,14 +19,31 @@ class HistorialRepository {
     return id;
   }
 
-  /// Lista de pedidos del cliente con nombre de sabor y tamaño.
-  Future<List<PedidoHistorial>> getPedidos() async {
+  /// Cuántos pedidos se traen por página.
+  ///
+  /// Los pedidos no se borran nunca —son registros de venta—, así que un
+  /// cliente habitual acumula cientos con el tiempo. Antes se traían todos
+  /// de golpe en cada apertura de la pantalla: lento, y con datos que nadie
+  /// llega a mirar.
+  static const int pedidosPorPagina = 20;
+
+  /// Página [pagina] (empezando en 0) de los pedidos del cliente, del más
+  /// reciente al más antiguo.
+  ///
+  /// Devolver menos de [porPagina] elementos significa que no hay más.
+  Future<List<PedidoHistorial>> getPedidos({
+    int pagina = 0,
+    int porPagina = pedidosPorPagina,
+  }) async {
+    final desde = pagina * porPagina;
+    final hasta = desde + porPagina - 1;
     try {
       final data = await _db
           .from('pedidos')
           .select('id, estado, total, created_at, sabores(nombre), tamanos_yogur(nombre), predisenhados(nombre, ingredientes)')
           .eq('cliente_id', _uid)
-          .order('created_at', ascending: false);
+          .order('created_at', ascending: false)
+          .range(desde, hasta);
 
       return (data as List)
           .map((row) => PedidoHistorial.fromSupabaseRow(row as Map<String, dynamic>))

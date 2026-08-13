@@ -15,12 +15,88 @@ class HistoryPage extends StatefulWidget {
 
 class _HistoryPageState extends State<HistoryPage> {
   final _repo = HistorialRepository();
-  late Future<List<PedidoHistorial>> _future;
+  final _scroll = ScrollController();
+
+  final List<PedidoHistorial> _pedidos = [];
+  int _pagina = 0;
+
+  bool _cargandoInicial = true;
+  bool _cargandoMas = false;
+
+  /// La última página vino llena, así que puede haber más detrás.
+  bool _hayMas = true;
+
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _future = _repo.getPedidos();
+    _scroll.addListener(_alDesplazar);
+    _cargarPrimeraPagina();
+  }
+
+  @override
+  void dispose() {
+    _scroll.removeListener(_alDesplazar);
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  /// Pide la siguiente página cuando faltan ~300 px para el final, para que
+  /// los pedidos ya estén ahí cuando el usuario llegue abajo.
+  void _alDesplazar() {
+    if (!_scroll.hasClients) return;
+    final falta = _scroll.position.maxScrollExtent - _scroll.position.pixels;
+    if (falta < 300) _cargarMas();
+  }
+
+  Future<void> _cargarPrimeraPagina() async {
+    setState(() {
+      _cargandoInicial = true;
+      _error = null;
+    });
+    try {
+      final pagina = await _repo.getPedidos(pagina: 0);
+      if (!mounted) return;
+      setState(() {
+        _pedidos
+          ..clear()
+          ..addAll(pagina);
+        _pagina = 0;
+        _hayMas = pagina.length == HistorialRepository.pedidosPorPagina;
+        _cargandoInicial = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _cargandoInicial = false;
+      });
+    }
+  }
+
+  Future<void> _cargarMas() async {
+    if (_cargandoMas || !_hayMas || _cargandoInicial) return;
+    setState(() => _cargandoMas = true);
+    try {
+      final siguiente = await _repo.getPedidos(pagina: _pagina + 1);
+      if (!mounted) return;
+      setState(() {
+        _pedidos.addAll(siguiente);
+        _pagina++;
+        _hayMas = siguiente.length == HistorialRepository.pedidosPorPagina;
+        _cargandoMas = false;
+      });
+    } catch (_) {
+      // Un fallo al traer más no debe borrar lo que ya se está viendo. Se
+      // corta la carga incremental y el usuario puede reintentar tirando
+      // hacia abajo para refrescar.
+      if (!mounted) return;
+      setState(() {
+        _cargandoMas = false;
+        _hayMas = false;
+      });
+    }
   }
 
   @override
@@ -31,43 +107,56 @@ class _HistoryPageState extends State<HistoryPage> {
         child: Column(
           children: [
             _buildHeader(),
-            Expanded(
-              child: FutureBuilder<List<PedidoHistorial>>(
-                future: _future,
-                builder: (context, snap) {
-                  if (snap.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snap.hasError) {
-                    return _buildError(snap.error.toString());
-                  }
-                  final pedidos = snap.data ?? [];
-                  if (pedidos.isEmpty) return _buildEmpty();
-                  return RefreshIndicator(
-                    onRefresh: () async {
-                      setState(() => _future = _repo.getPedidos());
-                    },
-                    child: ListView.separated(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: pedidos.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (context, i) => _PedidoCard(
-                        pedido: pedidos[i],
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => HistorialDetalleScreen(pedidoId: pedidos[i].id),
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
+            Expanded(child: _buildLista()),
             const CustomBottomNavBar(currentIndex: 3),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildLista() {
+    if (_cargandoInicial) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) return _buildError(_error!);
+    if (_pedidos.isEmpty) return _buildEmpty();
+
+    // Una fila extra al final: el indicador de "cargando más" mientras
+    // quede historial por traer.
+    final total = _pedidos.length + (_hayMas ? 1 : 0);
+
+    return RefreshIndicator(
+      onRefresh: _cargarPrimeraPagina,
+      child: ListView.separated(
+        controller: _scroll,
+        padding: const EdgeInsets.all(16),
+        itemCount: total,
+        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        itemBuilder: (context, i) {
+          if (i >= _pedidos.length) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: Center(
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            );
+          }
+          final pedido = _pedidos[i];
+          return _PedidoCard(
+            pedido: pedido,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => HistorialDetalleScreen(pedidoId: pedido.id),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -150,7 +239,7 @@ class _HistoryPageState extends State<HistoryPage> {
             ),
             const SizedBox(height: 16),
             TextButton(
-              onPressed: () => setState(() => _future = _repo.getPedidos()),
+              onPressed: _cargarPrimeraPagina,
               child: const Text('Reintentar'),
             ),
           ],

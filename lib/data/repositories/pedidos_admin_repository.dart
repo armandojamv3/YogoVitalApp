@@ -14,11 +14,10 @@ class PedidoAdminException implements Exception {
 class PedidosAdminRepository {
   SupabaseClient get _db => Supabase.instance.client;
 
-  String get _uid {
-    final id = _db.auth.currentUser?.id;
-    if (id == null) throw const PedidoAdminException('Usuario no autenticado');
-    return id;
-  }
+  // Antes había aquí un getter _uid que solo servía para rellenar admin_id
+  // al escribir el historial a mano. Ahora ese dato lo pone el trigger
+  // registrar_cambio_estado, que además solo lo rellena si quien cambia el
+  // estado es de verdad un administrador (ver migración 0048).
 
   // ── Transiciones válidas (HU_CambiarEstadoPedido_37) ─────────────────────
 
@@ -34,14 +33,10 @@ class PedidosAdminRepository {
     return _transiciones[estadoActual]?.contains(estadoNuevo) ?? false;
   }
 
-  // Mensajes de la notificación in-app que ve el cliente (mismo texto que
-  // usaba la Edge Function de push, que nunca quedó realmente conectada).
-  static const Map<String, String> _mensajesEstado = {
-    'En preparación': 'Tu yogur está siendo preparado 🍶',
-    'En camino': 'Tu pedido está en camino 🛵',
-    'Entregado': '¡Tu pedido ha llegado! ¡Disfrútalo! 🎉',
-    'Cancelado': 'Tu pedido fue cancelado ❌',
-  };
+  // Los textos de la notificación que ve el cliente vivían aquí duplicados
+  // con los del trigger crear_notificacion_cambio_estado. Se eliminaron
+  // junto con el INSERT que los usaba: la fuente única es ahora el trigger
+  // (ver migración 0048). Si hay que cambiar un mensaje, se cambia allí.
 
   static List<String> estadosSiguientes(String estadoActual) {
     return _transiciones[estadoActual] ?? [];
@@ -208,8 +203,6 @@ class PedidosAdminRepository {
           'Transición no permitida: $estadoActual → $estadoNuevo');
     }
 
-    final uid = _uid;
-
     // PASO 1: UPDATE pedido
     try {
       final rows = await _db
@@ -234,40 +227,22 @@ class PedidosAdminRepository {
       throw PedidoAdminException('No se pudo actualizar el pedido: ${e.message}');
     }
 
-    // PASO 2: INSERT historial (RNF09 trazabilidad)
-    try {
-      await _db.from('historial_estados').insert({
-        'pedido_id': pedidoId,
-        'estado_anterior': estadoActual,
-        'estado_nuevo': estadoNuevo,
-        'admin_id': uid,
-      });
-    } on PostgrestException catch (e) {
-      // El estado YA cambió (paso 1 exitoso); esto es solo trazabilidad,
-      // así que no lo tratamos como un fallo del cambio de estado, pero sí
-      // lo dejamos visible en el mensaje en vez de tragárnoslo en silencio.
-      throw PedidoAdminException(
-          'El estado se actualizó, pero no se pudo registrar el historial: ${e.message}');
-    }
+    // El historial y la notificación al cliente los escriben dos triggers
+    // sobre `pedidos` que dispara el UPDATE de arriba:
+    //
+    //   trg_registrar_cambio_estado         → historial_estados
+    //   trg_crear_notificacion_cambio_estado → notificaciones
+    //
+    // Aquí se insertaban también, así que cada cambio de estado dejaba dos
+    // filas de historial y le mandaba dos avisos idénticos al cliente. Los
+    // triggers existían en la base pero no en ninguna migración del repo,
+    // por eso nadie lo vio hasta la revisión del 6 de agosto (ver 0048).
+    //
+    // Se dejan los triggers y se quita esto: un trigger cubre también los
+    // cambios hechos desde el editor SQL o desde cualquier función futura,
+    // que es lo que hace falta para la trazabilidad del RNF09.
 
-    // PASO 3: Notificación in-app (Realtime). Es el mecanismo real de
-    // aviso al cliente: no depende de ningún servicio externo.
-    // Esquema real de la tabla: usuario_id/titulo/mensaje/tipo/leida.
-    try {
-      await _db.from('notificaciones').insert({
-        'usuario_id': clienteId,
-        'pedido_id': pedidoId,
-        'titulo': 'Actualización de tu pedido',
-        'mensaje': _mensajesEstado[estadoNuevo] ??
-            'Tu pedido cambió a: $estadoNuevo',
-        'tipo': 'pedido',
-        'leida': false,
-      });
-    } catch (_) {
-      // Best-effort: no interrumpir el cambio de estado si esto falla.
-    }
-
-    // PASO 4: Push notification (best-effort, no falla el flujo principal).
+    // Push notification (best-effort, no falla el flujo principal).
     // Nota: hoy no llega a ningún lado porque la app no tiene integrado
     // Firebase/FCM (ver notificaciones in-app arriba, que sí funcionan).
     try {
