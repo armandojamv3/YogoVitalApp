@@ -21,6 +21,10 @@ plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
     id("com.android.application") version "8.9.1" apply false
     id("org.jetbrains.kotlin.android") version "2.1.0" apply false
+    // Lee android/app/google-services.json y genera los recursos que
+    // Firebase necesita en tiempo de compilación. Sin esto, la app compila
+    // pero FirebaseMessaging no encuentra el proyecto y falla al arrancar.
+    id("com.google.gms.google-services") version "4.4.2" apply false
 }
 
 include(":app")

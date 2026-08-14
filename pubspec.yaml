@@ -52,6 +52,15 @@ dependencies:
   # Subida de fotos (sabores) a Supabase Storage
   image_picker: ^1.1.2
 
+  # Notificaciones push (FCM). Avisan al administrador de pedidos nuevos
+  # aunque tenga la app cerrada, que es lo único que no resuelven las
+  # notificaciones in-app guardadas en Supabase.
+  firebase_core: ^3.8.0
+  firebase_messaging: ^15.1.5
+  # Muestra la notificación cuando llega con la app en primer plano: en ese
+  # caso Android no la dibuja solo, hay que hacerlo a mano.
+  flutter_local_notifications: ^18.0.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "360091873726",
+    "project_id": "yogo-vital-18251",
+    "storage_bucket": "yogo-vital-18251.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:360091873726:android:b2cfc4d80d08f2759ec9ef",
+        "android_client_info": {
+          "package_name": "com.example.yogo_vital_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAScvyh9xkemP7Gg8K2zWEw4t2LFC15IsI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

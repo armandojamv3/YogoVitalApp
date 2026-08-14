@@ -38,6 +38,27 @@ class PedidosAdminRepository {
   // junto con el INSERT que los usaba: la fuente única es ahora el trigger
   // (ver migración 0048). Si hay que cambiar un mensaje, se cambia allí.
 
+  /// Texto de la notificación push que ve el cliente.
+  ///
+  /// Duplica a propósito los mensajes del trigger
+  /// crear_notificacion_cambio_estado: aquel escribe la notificación in-app
+  /// en la base, este viaja a FCM. Son dos canales distintos y el trigger no
+  /// puede llamar a la Edge Function.
+  static String _cuerpoPush(String estado) {
+    switch (estado) {
+      case 'En preparación':
+        return 'Tu yogur está siendo preparado 🍶';
+      case 'En camino':
+        return 'Tu pedido está en camino 🛵';
+      case 'Entregado':
+        return '¡Tu pedido ha llegado! Disfrútalo 🎉';
+      case 'Cancelado':
+        return 'Tu pedido fue cancelado';
+      default:
+        return 'El estado de tu pedido cambió a: $estado';
+    }
+  }
+
   static List<String> estadosSiguientes(String estadoActual) {
     return _transiciones[estadoActual] ?? [];
   }
@@ -249,8 +270,9 @@ class PedidosAdminRepository {
       await _db.functions.invoke(
         'send-notification',
         body: {
-          'cliente_id': clienteId,
-          'nuevo_estado': estadoNuevo,
+          'usuario_id': clienteId,
+          'titulo': 'Actualización de pedido',
+          'cuerpo': _cuerpoPush(estadoNuevo),
           'pedido_id': pedidoId,
         },
       );

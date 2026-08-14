@@ -1,4 +1,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- INTERNET solo estaba declarado en los manifiestos de debug y
+         profile, que es lo que genera Flutter por defecto. En una compilación
+         de release la app se quedaba SIN acceso a red: ni Supabase, ni
+         imágenes, ni nada. Nunca se notó porque hasta ahora solo se ha
+         ejecutado en modo debug. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- Desde Android 13 (API 33) las notificaciones requieren permiso
+         explícito del usuario. Sin esta línea, el diálogo que pide
+         FirebaseMessaging.requestPermission() no llega a aparecer y las
+         push se descartan en silencio. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
     <application
         android:label="yogo_vital_app"
         android:name="${applicationName}"

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:yogo_vital_app/core/models/direccion_model.dart';
 import 'package:yogo_vital_app/core/models/pedido.dart';
@@ -59,6 +60,39 @@ class PedidoSupabaseRepository {
 
   // ── Pedidos ──────────────────────────────────────────────────────────────
 
+  /// Manda una push a los administradores.
+  ///
+  /// La notificación in-app ya la escriben las RPC `crear_pedido` y
+  /// `cancelar_pedido` dentro de su transacción; esto es el otro canal, el
+  /// que hace sonar el teléfono con la app cerrada. No puede hacerlo la
+  /// función de Postgres: no sabe llamar a una Edge Function.
+  ///
+  /// Solo se manda el evento y el id: **el texto lo compone la Edge
+  /// Function** leyendo el pedido real. Si lo armara aquí, el mensaje
+  /// llevaría la idea que tiene la app del precio, que no siempre coincide
+  /// con lo que cobró el servidor — esa discrepancia es justo el bug que
+  /// arregló la migración 0043.
+  ///
+  /// Es best-effort a propósito. Si FCM no responde, el pedido ya está
+  /// creado y el aviso in-app guardado; interrumpir aquí sería peor.
+  ///
+  /// La Edge Function resuelve quiénes son los administradores por su
+  /// cuenta: el cliente nunca recibe esos ids.
+  Future<void> _avisarAlNegocio({
+    required String evento, // 'nuevo' | 'cancelado'
+    required String pedidoId,
+  }) async {
+    try {
+      await _db.functions.invoke('send-notification', body: {
+        'destino': 'administradores',
+        'evento': evento,
+        'pedido_id': pedidoId,
+      });
+    } catch (e) {
+      debugPrint('[Pedidos] No se pudo enviar la push al negocio: $e');
+    }
+  }
+
   /// HU_21: confirmar pedido personalizado.
   ///
   /// Delega en la RPC `crear_pedido` (migración 0043). Antes esto eran 4
@@ -107,6 +141,8 @@ class PedidoSupabaseRepository {
     if (pedidoId.isEmpty) {
       throw Exception('No se pudo crear el pedido');
     }
+
+    await _avisarAlNegocio(evento: 'nuevo', pedidoId: pedidoId);
     return pedidoId;
   }
 
@@ -157,6 +193,8 @@ class PedidoSupabaseRepository {
     if (pedidoId.isEmpty) {
       throw Exception('No se pudo crear el pedido');
     }
+
+    await _avisarAlNegocio(evento: 'nuevo', pedidoId: pedidoId);
     return pedidoId;
   }
 
@@ -194,6 +232,7 @@ class PedidoSupabaseRepository {
     } on PostgrestException catch (e) {
       throw _PedidoException(e.message);
     }
+    await _avisarAlNegocio(evento: 'cancelado', pedidoId: pedidoId);
   }
 
   /// HU_28 (historial): pedidos del cliente ordenados por fecha

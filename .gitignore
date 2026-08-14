@@ -33,6 +33,20 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Credenciales de Firebase que NUNCA deben subirse.
+#
+# La clave privada de la cuenta de servicio da acceso administrativo al
+# proyecto de Firebase: con ella se pueden enviar notificaciones a todos tus
+# usuarios haciéndose pasar por el negocio. Vive solo en las variables de
+# entorno de Supabase.
+#
+# Ojo: android/app/google-services.json SÍ puede subirse. Es configuración
+# de cliente, va dentro del APK y Google la considera pública — misma
+# categoría que la anon key de Supabase.
+*-firebase-adminsdk-*.json
+service-account*.json
+serviceAccountKey*.json
+
 # Symbolication related
 app.*.symbols
 

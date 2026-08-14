@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:yogo_vital_app/core/models/cart_model.dart';
 import 'package:yogo_vital_app/core/providers/auth_provider.dart';
 import 'package:yogo_vital_app/core/providers/pedido_provider.dart';
+import 'package:yogo_vital_app/core/services/push_service.dart';
 import 'package:yogo_vital_app/data/datasources/auth_remote_datasource.dart';
 import 'package:yogo_vital_app/data/repositories/auth_repository.dart';
 import 'package:yogo_vital_app/presentation/pages/home/home_page.dart';
@@ -50,12 +51,39 @@ void main() async {
   await initializeDateFormatting('es', null);
   await Supabase.initialize(url: _supabaseUrl, anonKey: _supabaseAnonKey);
 
+  // No se espera con await a propósito: si Firebase tarda o falla, la app
+  // debe arrancar igual. Sin push se pierden los avisos con la app cerrada,
+  // pero las notificaciones in-app se siguen guardando en Supabase.
+  PushService.instance.iniciar();
+
   _escucharRecuperacionDePassword();
+  _atarPushAlCicloDeSesion();
 
   final authRemote = AuthRemoteDataSource();
   final authRepo = AuthRepository(remote: authRemote);
 
   runApp(MyApp(authRepository: authRepo));
+}
+
+/// Registra el dispositivo para recibir push al iniciar sesión.
+///
+/// La baja NO se hace aquí. Cuando llega el evento `signedOut`, la sesión ya
+/// está cerrada y `auth.uid()` es null, así que la RPC que borra el token no
+/// tendría a quién atribuirlo. Se hace antes, dentro de
+/// AuthRepository.logout().
+void _atarPushAlCicloDeSesion() {
+  final auth = Supabase.instance.client.auth;
+
+  // Sesión ya activa al abrir la app: no dispara signedIn.
+  if (auth.currentUser != null) {
+    PushService.instance.registrarParaUsuarioActual();
+  }
+
+  auth.onAuthStateChange.listen((estado) {
+    if (estado.event == AuthChangeEvent.signedIn) {
+      PushService.instance.registrarParaUsuarioActual();
+    }
+  });
 }
 
 /// Lleva al usuario a poner su nueva contraseña cuando abre el enlace del
