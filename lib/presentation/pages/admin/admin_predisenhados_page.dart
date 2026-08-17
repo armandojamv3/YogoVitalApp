@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -8,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:yogo_vital_app/core/models/predisenhado_admin_provider.dart';
 import 'package:yogo_vital_app/core/models/predisenhado_model.dart';
 import 'package:yogo_vital_app/core/services/user_role_service.dart';
+import 'package:yogo_vital_app/presentation/widgets/imagen_producto.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Paleta de colores del módulo admin de prediseñados (mismo estilo que Sabores)
@@ -401,21 +400,13 @@ class _PredisenhadoCard extends StatelessWidget {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(14),
-                child: (p.imagenUrl != null && p.imagenUrl!.isNotEmpty)
-                    ? Image.network(
-                        p.imagenUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Icon(
-                          Icons.icecream_rounded,
-                          color: p.activo ? _kPrimary : Colors.grey,
-                          size: 28,
-                        ),
-                      )
-                    : Icon(
-                        Icons.icecream_rounded,
-                        color: p.activo ? _kPrimary : Colors.grey,
-                        size: 28,
-                      ),
+                child: ImagenProducto(
+                  url: p.imagenUrl,
+                  iconoVacio: Icons.icecream_rounded,
+                  tamanoIcono: 28,
+                  colorFondoRespaldo: Colors.transparent,
+                  colorIcono: p.activo ? _kPrimary : Colors.grey,
+                ),
               ),
             ),
             const SizedBox(width: 14),
@@ -435,7 +426,11 @@ class _PredisenhadoCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      if (p.esNuevo) _buildTag('Nuevo', const Color(0xFF2196F3)),
+                      // Se usa mostrarComoNuevo y no esNuevo para que el
+                      // administrador vea exactamente lo mismo que el cliente:
+                      // si la etiqueta ya caducó, aquí tampoco aparece.
+                      if (p.mostrarComoNuevo)
+                        _buildTag('Nuevo', const Color(0xFF2196F3)),
                       if (p.esPopular) ...[
                         const SizedBox(width: 4),
                         _buildTag('Popular', const Color(0xFFFF9800)),
@@ -647,11 +642,11 @@ class _PredisenhadoFormPageState extends State<PredisenhadoFormPage> {
       return Image.memory(_imagenNuevaBytes!, fit: BoxFit.cover);
     }
     if (_imagenUrlExistente != null && _imagenUrlExistente!.isNotEmpty) {
-      return Image.network(
-        _imagenUrlExistente!,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => const Icon(
-            Icons.icecream_rounded, color: Colors.white, size: 40),
+      return ImagenProducto(
+        url: _imagenUrlExistente,
+        iconoVacio: Icons.icecream_rounded,
+        colorFondoRespaldo: Colors.transparent,
+        colorIcono: Colors.white,
       );
     }
     return const Center(
@@ -903,7 +898,7 @@ class _PredisenhadoFormPageState extends State<PredisenhadoFormPage> {
                               contentPadding: EdgeInsets.zero,
                               value: _esPopular,
                               onChanged: (v) => setState(() => _esPopular = v),
-                              activeColor: const Color(0xFFFF9800),
+                              activeThumbColor: const Color(0xFFFF9800),
                               title: const Text('Popular',
                                   style: TextStyle(fontSize: 14)),
                             ),
@@ -913,12 +908,29 @@ class _PredisenhadoFormPageState extends State<PredisenhadoFormPage> {
                               contentPadding: EdgeInsets.zero,
                               value: _esNuevo,
                               onChanged: (v) => setState(() => _esNuevo = v),
-                              activeColor: const Color(0xFF2196F3),
+                              activeThumbColor: const Color(0xFF2196F3),
                               title: const Text('Nuevo',
                                   style: TextStyle(fontSize: 14)),
                             ),
                           ),
                         ],
+                      ),
+
+                      // Sin esta nota el administrador activa "Nuevo" en un
+                      // producto viejo, no ve cambio alguno y cree que está
+                      // roto.
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          'La etiqueta "Nuevo" se muestra durante los '
+                          'primeros 30 días desde que se crea el producto y '
+                          'luego desaparece sola.',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[600],
+                            height: 1.3,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 20),
 

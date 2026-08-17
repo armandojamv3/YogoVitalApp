@@ -158,6 +158,7 @@ class PedidoSupabaseRepository {
     String? saborId,
     String? predisenhadoId,
     String? tamanoId,
+    String dulzura = 'Normal',
     required String direccionId,
     required String metodoPago,
     int cantidad = 1,
@@ -186,6 +187,7 @@ class PedidoSupabaseRepository {
       else
         'p_sabor_id': saborId,
       if (tamanoId != null && tamanoId.isNotEmpty) 'p_tamano_id': tamanoId,
+      'p_dulzura': dulzura,
       'p_cantidad': cantidad,
     });
 

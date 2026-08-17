@@ -5,7 +5,12 @@ class Sabor {
   final String descripcion;
   final double precioBase;
   final String? imagenUrl;
-  final double calificacionPromedio;
+  /// Promedio de estrellas, o **null si nadie lo ha calificado todavía**.
+  ///
+  /// Antes esto era un `double` que caía en 5.0 cuando no había datos, así
+  /// que todo producto recién creado aparecía con la nota máxima sin que
+  /// nadie lo hubiera probado.
+  final double? calificacionPromedio;
   final bool activo;
   final DateTime createdAt;
 
@@ -15,7 +20,7 @@ class Sabor {
     required this.descripcion,
     required this.precioBase,
     this.imagenUrl,
-    this.calificacionPromedio = 5.0,
+    this.calificacionPromedio,
     required this.activo,
     required this.createdAt,
   });
@@ -29,7 +34,7 @@ class Sabor {
       imagenUrl: json['imagen_url'] as String?,
       calificacionPromedio: _parseDouble(json['calificacion_promedio']) > 0
           ? _parseDouble(json['calificacion_promedio'])
-          : 5.0,
+          : null,
       activo: json['activo'] as bool? ?? true,
       createdAt: _parseDate(json['created_at']),
     );
@@ -41,7 +46,8 @@ class Sabor {
     'descripcion': descripcion,
     'precio_base': precioBase,
     if (imagenUrl != null) 'imagen_url': imagenUrl,
-    'calificacion_promedio': calificacionPromedio,
+    if (calificacionPromedio != null)
+      'calificacion_promedio': calificacionPromedio,
     'activo': activo,
     'created_at': createdAt.toIso8601String(),
   };

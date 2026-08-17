@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -8,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:yogo_vital_app/core/models/sabor.dart';
 import 'package:yogo_vital_app/core/models/sabor_admin_provider.dart';
 import 'package:yogo_vital_app/core/services/user_role_service.dart';
+import 'package:yogo_vital_app/presentation/widgets/imagen_producto.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Paleta de colores del módulo admin de sabores
@@ -434,21 +433,13 @@ class _SaborCard extends StatelessWidget {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(14),
-                child: (sabor.imagenUrl != null && sabor.imagenUrl!.isNotEmpty)
-                    ? Image.network(
-                        sabor.imagenUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Icon(
-                          Icons.icecream_rounded,
-                          color: sabor.activo ? _kPrimary : Colors.grey,
-                          size: 28,
-                        ),
-                      )
-                    : Icon(
-                        Icons.icecream_rounded,
-                        color: sabor.activo ? _kPrimary : Colors.grey,
-                        size: 28,
-                      ),
+                child: ImagenProducto(
+                  url: sabor.imagenUrl,
+                  iconoVacio: Icons.icecream_rounded,
+                  tamanoIcono: 28,
+                  colorFondoRespaldo: Colors.transparent,
+                  colorIcono: sabor.activo ? _kPrimary : Colors.grey,
+                ),
               ),
             ),
             const SizedBox(width: 14),
@@ -652,11 +643,11 @@ class _SaborFormPageState extends State<SaborFormPage> {
       return Image.memory(_imagenNuevaBytes!, fit: BoxFit.cover);
     }
     if (_imagenUrlExistente != null && _imagenUrlExistente!.isNotEmpty) {
-      return Image.network(
-        _imagenUrlExistente!,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => const Icon(
-            Icons.icecream_rounded, color: Colors.white, size: 40),
+      return ImagenProducto(
+        url: _imagenUrlExistente,
+        iconoVacio: Icons.icecream_rounded,
+        colorFondoRespaldo: Colors.transparent,
+        colorIcono: Colors.white,
       );
     }
     return const Center(

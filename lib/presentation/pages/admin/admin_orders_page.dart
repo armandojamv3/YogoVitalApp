@@ -488,10 +488,15 @@ class _PedidoAdminCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Text(pedido.idCorto,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 14)),
-                      const Spacer(),
+                      // Expanded y no Spacer: con estados largos como
+                      // "En preparación" la fila no cabía y se recortaba.
+                      Expanded(
+                        child: Text(pedido.idCorto,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 14)),
+                      ),
+                      const SizedBox(width: 6),
                       _EstadoBadge(estado: estado),
                     ],
                   ),
@@ -505,10 +510,13 @@ class _PedidoAdminCard extends StatelessWidget {
                       Icon(Icons.access_time_rounded,
                           size: 11, color: Colors.grey[500]),
                       const SizedBox(width: 3),
-                      Text(fecha,
-                          style: TextStyle(
-                              fontSize: 11, color: Colors.grey[500])),
-                      const Spacer(),
+                      Expanded(
+                        child: Text(fecha,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 11, color: Colors.grey[500])),
+                      ),
+                      const SizedBox(width: 6),
                       Text('\$ ${fmt.format(pedido.total)} COP',
                           style: const TextStyle(
                               fontWeight: FontWeight.bold,

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#FFFFFF</color>
+
+    <!-- Fondo de la pantalla de arranque. Blanco fijo, no un color del
+         tema: si se deja "?android:colorBackground", en modo oscuro
+         resuelve a negro y el logo aparece sobre fondo negro. -->
+    <color name="fondo_arranque">#FFFFFF</color>
+</resources>

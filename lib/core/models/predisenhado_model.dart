@@ -11,7 +11,13 @@ class PredisenhadoModel {
   final String? imagenUrl;
   final bool activo;
   final bool esPopular;
+
+  /// El interruptor que marca el administrador. Para saber si la etiqueta
+  /// debe verse hoy usa [mostrarComoNuevo], no este campo.
   final bool esNuevo;
+
+  /// Fecha de alta. Sirve para caducar la etiqueta "Nuevo".
+  final DateTime? createdAt;
 
   const PredisenhadoModel({
     required this.id,
@@ -23,7 +29,26 @@ class PredisenhadoModel {
     this.activo = true,
     this.esPopular = false,
     this.esNuevo = false,
+    this.createdAt,
   });
+
+  /// Cuánto dura la etiqueta "Nuevo" desde que se crea el producto.
+  static const duracionEtiquetaNuevo = Duration(days: 30);
+
+  /// Si la etiqueta "Nuevo" debe mostrarse **hoy**.
+  ///
+  /// Antes bastaba con que el administrador activara el interruptor, y como
+  /// nadie volvía a apagarlo la etiqueta se quedaba puesta para siempre.
+  /// Ahora caduca sola a los 30 días del alta del producto.
+  ///
+  /// Si no hay fecha de alta (registros viejos sin `created_at`) se respeta
+  /// el interruptor, para no hacer desaparecer etiquetas sin motivo.
+  bool get mostrarComoNuevo {
+    if (!esNuevo) return false;
+    final alta = createdAt;
+    if (alta == null) return true;
+    return DateTime.now().difference(alta) < duracionEtiquetaNuevo;
+  }
 
   factory PredisenhadoModel.fromJson(Map<String, dynamic> json) {
     return PredisenhadoModel(
@@ -36,6 +61,7 @@ class PredisenhadoModel {
       activo: json['activo'] as bool? ?? true,
       esPopular: json['es_popular'] as bool? ?? false,
       esNuevo: json['es_nuevo'] as bool? ?? false,
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? ''),
     );
   }
 

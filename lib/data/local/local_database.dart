@@ -34,7 +34,8 @@ class LocalDatabase {
   static const _dbName = 'yogo_vital_cache.db';
 
   /// v1: catálogo. v2: + tabla `carrito`. v3: + carrito.tamano_id.
-  static const int _version = 3;
+  /// v4: + carrito.dulzura.
+  static const int _version = 4;
 
   /// Nombre de la tabla del carrito, para no repetir el literal.
   static const String tablaCarrito = 'carrito';
@@ -119,6 +120,12 @@ class LocalDatabase {
           await _agregarColumnaSiFalta(
               db, tablaCarrito, 'tamano_id', "TEXT NOT NULL DEFAULT ''");
         }
+        if (anterior < 4) {
+          // Los yogures típicos ahora dejan elegir la dulzura en el detalle
+          // del producto, no solo en el personalizador.
+          await _agregarColumnaSiFalta(
+              db, tablaCarrito, 'dulzura', "TEXT NOT NULL DEFAULT 'Normal'");
+        }
       },
     );
   }
@@ -136,6 +143,7 @@ class LocalDatabase {
         image      TEXT,
         size       TEXT    NOT NULL,
         tamano_id  TEXT    NOT NULL DEFAULT '',
+        dulzura    TEXT    NOT NULL DEFAULT 'Normal',
         qty        INTEGER NOT NULL,
         checked    INTEGER NOT NULL,
         tipo       TEXT,

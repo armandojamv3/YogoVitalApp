@@ -6,6 +6,7 @@ import 'package:yogo_vital_app/data/repositories/catalogo_repository.dart';
 import 'package:yogo_vital_app/presentation/pages/yogurt/categories/personalizado_page.dart';
 import 'package:yogo_vital_app/presentation/pages/yogurt/predisenhado_detail_page.dart';
 import 'package:yogo_vital_app/presentation/widgets/custom_bottom_nav_bar.dart';
+import 'package:yogo_vital_app/presentation/widgets/imagen_producto.dart';
 import 'package:yogo_vital_app/presentation/widgets/sabor_search_delegate.dart';
 
 class YogurtPage extends StatefulWidget {
@@ -246,11 +247,13 @@ class _YogurtPageState extends State<YogurtPage>
                           color: Color(0xFF2E7D32),
                           fontWeight: FontWeight.w600,
                           fontSize: 12)),
-                  Row(children: [
-                    const Icon(Icons.star, size: 12, color: Colors.amber),
-                    Text(' ${s.calificacionPromedio.toStringAsFixed(1)}',
-                        style: const TextStyle(fontSize: 11)),
-                  ]),
+                  if (s.calificacionPromedio != null)
+                    Row(children: [
+                      const Icon(Icons.star, size: 12, color: Colors.amber),
+                      Text(
+                          ' ${s.calificacionPromedio!.toStringAsFixed(1)}',
+                          style: const TextStyle(fontSize: 11)),
+                    ]),
                 ],
               ),
             ),
@@ -340,7 +343,7 @@ class _YogurtPageState extends State<YogurtPage>
                           style: const TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 12)),
                     ),
-                    if (p.esNuevo)
+                    if (p.mostrarComoNuevo)
                       _buildMiniBadge('Nuevo', const Color(0xFF2196F3))
                     else if (p.esPopular)
                       _buildMiniBadge('Popular', const Color(0xFFFF9800)),
@@ -548,38 +551,13 @@ class _YogurtPageState extends State<YogurtPage>
     );
   }
 
+  /// Imagen con caché en disco. Antes usaba Image.network, que vuelve a
+  /// descargar la foto en cada reconstrucción del widget.
   Widget _netImg(String? url, {double? height}) {
-    if (url == null || url.isEmpty) {
-      return Container(
-        height: height,
-        color: Colors.orange[100],
-        child: const Center(
-          child: Icon(Icons.icecream, color: Colors.orange, size: 40),
-        ),
-      );
-    }
-    return Image.network(
-      url,
-      height: height,
-      width: double.infinity,
-      fit: BoxFit.cover,
-      loadingBuilder: (context, child, progress) {
-        if (progress == null) return child;
-        return Container(
-          height: height,
-          color: const Color(0xFFE0E0E0),
-          child: const Center(
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-        );
-      },
-      errorBuilder: (_, __, ___) => Container(
-        height: height,
-        color: Colors.orange[100],
-        child: const Center(
-          child: Icon(Icons.icecream, color: Colors.orange, size: 40),
-        ),
-      ),
+    return ImagenProducto(
+      url: url,
+      alto: height,
+      ancho: double.infinity,
     );
   }
 }

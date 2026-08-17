@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:yogo_vital_app/core/models/sabor.dart';
 import 'package:yogo_vital_app/data/repositories/favoritos_repository.dart';
 import 'package:yogo_vital_app/presentation/widgets/favorite_button.dart';
+import 'package:yogo_vital_app/presentation/widgets/imagen_producto.dart';
 
 /// Sabores que el cliente marcó con el corazón.
 class FavoritosPage extends StatefulWidget {
@@ -132,16 +133,12 @@ class _FavoritosPageState extends State<FavoritosPage> {
                             children: [
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(10),
-                                child: s.imagenUrl != null
-                                    ? Image.network(
-                                        s.imagenUrl!,
-                                        width: 60,
-                                        height: 60,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) =>
-                                            _placeholder(),
-                                      )
-                                    : _placeholder(),
+                                child: ImagenProducto(
+                                  url: s.imagenUrl,
+                                  ancho: 60,
+                                  alto: 60,
+                                  tamanoIcono: 28,
+                                ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -184,10 +181,4 @@ class _FavoritosPageState extends State<FavoritosPage> {
     );
   }
 
-  Widget _placeholder() => Container(
-        width: 60,
-        height: 60,
-        color: Colors.orange[100],
-        child: const Icon(Icons.icecream, color: Colors.orange),
-      );
 }

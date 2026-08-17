@@ -287,14 +287,21 @@ class _PedidoCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Text(
-                          pedido.idCorto,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
+                        // Expanded en vez de Spacer: con estados largos como
+                        // "En preparación" la fila no cabía en pantallas
+                        // estrechas y se recortaba la insignia. Ahora el id
+                        // cede el espacio que haga falta.
+                        Expanded(
+                          child: Text(
+                            pedido.idCorto,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
                           ),
                         ),
-                        const Spacer(),
+                        const SizedBox(width: 8),
                         _EstadoBadge(estado: estado),
                       ],
                     ),

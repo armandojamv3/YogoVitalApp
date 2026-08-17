@@ -80,7 +80,7 @@ class _PedidoAdminDetalleScreenState extends State<PedidoAdminDetalleScreen> {
               const Icon(Icons.check_circle_rounded,
                   color: Colors.white, size: 18),
               const SizedBox(width: 8),
-              Text('Estado actualizado a "$nuevoEstado"'),
+              Expanded(child: Text('Estado actualizado a "$nuevoEstado"')),
             ],
           ),
           backgroundColor: _kSuccess,
@@ -347,12 +347,16 @@ class _PedidoAdminDetalleScreenState extends State<PedidoAdminDetalleScreen> {
                       const Text('Total',
                           style: TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text(
-                        '\$ ${fmtCop.format(p.total)} COP',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                            color: _kTeal),
+                      Flexible(
+                        child: Text(
+                          '\$ ${fmtCop.format(p.total)} COP',
+                          textAlign: TextAlign.end,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                              color: _kTeal),
+                        ),
                       ),
                     ],
                   ),

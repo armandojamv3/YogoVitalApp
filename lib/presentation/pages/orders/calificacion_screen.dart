@@ -75,7 +75,7 @@ class _CalificacionScreenState extends State<CalificacionScreen> {
             children: [
               Icon(Icons.star_rounded, color: Colors.white),
               SizedBox(width: 10),
-              Text('¡Calificación enviada! Gracias.'),
+              Expanded(child: Text('¡Calificación enviada! Gracias.')),
             ],
           ),
           backgroundColor: Color(0xFF4CAF50),

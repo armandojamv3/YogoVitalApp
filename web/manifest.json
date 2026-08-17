@@ -1,6 +1,6 @@
 {
-    "name": "yogo_vital_app",
-    "short_name": "yogo_vital_app",
+    "name": "Yogo Vital",
+    "short_name": "Yogo Vital",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

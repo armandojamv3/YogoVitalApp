@@ -34,7 +34,6 @@ class _CartCheckoutPageState extends State<CartCheckoutPage> {
   List<CartItem> _itemsAPedir(CartModel cart) =>
       widget.itemsDirectos ?? cart.items.where((it) => it.checked).toList();
 
-  List<DireccionModel> _dirs = [];
   DireccionModel? _selected;
   bool _loadingDirs = true;
   bool _confirming = false;
@@ -60,7 +59,6 @@ class _CartCheckoutPageState extends State<CartCheckoutPage> {
       final dirs = await _repo.getDirecciones();
       if (!mounted) return;
       setState(() {
-        _dirs = dirs;
         _selected =
             dirs.where((d) => d.esPrincipal).firstOrNull ?? dirs.firstOrNull;
         _loadingDirs = false;
@@ -91,6 +89,7 @@ class _CartCheckoutPageState extends State<CartCheckoutPage> {
               esPredisenhado ? item.id.substring('pred_'.length) : null,
           saborId: esPredisenhado || item.id.isEmpty ? null : item.id,
           tamanoId: item.tamanoId,
+          dulzura: item.dulzura,
           direccionId: _selected!.id,
           metodoPago: _metodoPago!,
           cantidad: item.qty,
@@ -209,9 +208,13 @@ class _CartCheckoutPageState extends State<CartCheckoutPage> {
                     _buildMetodoPagoSection(),
                     const SizedBox(height: 24),
 
-                    // Confirmar
+                    // Confirmar. Altura fija de 48: es la medida estándar
+                    // de un botón táctil. Antes se definía con padding
+                    // vertical de 16, que sumado al texto daba unos 56 y
+                    // hacía los dos botones desproporcionados.
                     SizedBox(
                       width: double.infinity,
+                      height: 48,
                       child: ElevatedButton.icon(
                         onPressed:
                             canConfirm ? () => _confirmar(cart) : null,
@@ -230,33 +233,31 @@ class _CartCheckoutPageState extends State<CartCheckoutPage> {
                               : 'Confirmar pedido',
                           style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 16,
+                              fontSize: 15,
                               fontWeight: FontWeight.w600),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF4CAF50),
                           disabledBackgroundColor: Colors.grey[300],
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14)),
+                              borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
                     ),
                     const SizedBox(height: 12),
 
-                    // Volver
+                    // Volver: acción secundaria, algo más baja que la
+                    // principal para que no compitan visualmente.
                     SizedBox(
                       width: double.infinity,
+                      height: 44,
                       child: OutlinedButton(
                         onPressed: () => Navigator.pop(context),
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(
                               color: Color(0xFF5B9EF5)),
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14)),
+                              borderRadius: BorderRadius.circular(12)),
                         ),
                         // En compra directa no se viene del carrito, sino
                         // del detalle del producto.
@@ -265,7 +266,7 @@ class _CartCheckoutPageState extends State<CartCheckoutPage> {
                                 ? 'Volver'
                                 : 'Volver al carrito',
                             style: const TextStyle(
-                                color: Color(0xFF5B9EF5), fontSize: 15)),
+                                color: Color(0xFF5B9EF5), fontSize: 14)),
                       ),
                     ),
 
@@ -324,12 +325,17 @@ class _CartCheckoutPageState extends State<CartCheckoutPage> {
               const Text('Total',
                   style: TextStyle(
                       fontWeight: FontWeight.bold, fontSize: 16)),
-              Text(
-                _cop.format(total),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2E7D32),
+              Flexible(
+                child: Text(
+                  _cop.format(total),
+                  textAlign: TextAlign.end,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2E7D32),
+                  ),
                 ),
               ),
             ],
@@ -348,16 +354,27 @@ class _CartCheckoutPageState extends State<CartCheckoutPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // El título en negrita más el botón "Cambiar" con su icono no
+          // caben juntos en pantallas estrechas, y ninguno cedía espacio.
+          // El título se lleva el ancho sobrante y el botón se queda con
+          // el suyo.
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('📍 Dirección de entrega',
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 15)),
+              const Expanded(
+                child: Text('📍 Dirección de entrega',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 15)),
+              ),
               TextButton.icon(
                 onPressed: _openSelector,
                 icon: const Icon(Icons.edit_location_alt, size: 16),
                 label: const Text('Cambiar'),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  visualDensity: VisualDensity.compact,
+                ),
               ),
             ],
           ),

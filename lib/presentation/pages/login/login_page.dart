@@ -6,6 +6,7 @@ import 'package:yogo_vital_app/core/theme/app_theme.dart';
 import 'package:yogo_vital_app/data/repositories/auth_repository.dart';
 import 'package:yogo_vital_app/presentation/widgets/auth/auth_text_field.dart';
 import 'package:yogo_vital_app/presentation/widgets/auth/primary_button.dart';
+import 'package:yogo_vital_app/presentation/widgets/google_sign_in_button.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -19,6 +20,7 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _loading = false;
+  bool _googleLoading = false;
 
   // HU_03: botón activo solo cuando ambos campos tienen contenido y no hay request en curso
   bool get _canSubmit =>
@@ -60,6 +62,25 @@ class _LoginPageState extends State<LoginPage> {
       _showError('Error de conexión. Intenta de nuevo.');
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  /// Inicio de sesión con Google.
+  ///
+  /// No navega a /home al terminar: el flujo abre el navegador y vuelve por
+  /// deep link, así que quien decide qué hacer es el listener de
+  /// onAuthStateChange, no esta pantalla. Aquí solo se apaga el indicador si
+  /// el usuario cancela y regresa sin haber entrado.
+  Future<void> _loginConGoogle() async {
+    setState(() => _googleLoading = true);
+    try {
+      await context.read<AuthRepository>().signInWithGoogle();
+    } catch (e) {
+      debugPrint('LOGIN Google: $e');
+      if (!mounted) return;
+      _showError('No se pudo iniciar sesión con Google. Intenta de nuevo.');
+    } finally {
+      if (mounted) setState(() => _googleLoading = false);
     }
   }
 
@@ -167,6 +188,39 @@ class _LoginPageState extends State<LoginPage> {
                   onPressed: _canSubmit ? _login : null,
                   isLoading: _loading,
                 ),
+                const SizedBox(height: 20),
+
+                // ── Separador ─────────────────────────────────────────────
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Divider(color: Colors.white38, thickness: 1),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(
+                        'o',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          color: Colors.white.withValues(alpha: 0.8),
+                        ),
+                      ),
+                    ),
+                    const Expanded(
+                      child: Divider(color: Colors.white38, thickness: 1),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // ── Continuar con Google ──────────────────────────────────
+                // Antes solo estaba en la pantalla de bienvenida, así que
+                // quien entraba por "Iniciar sesión" tenía que retroceder
+                // para encontrarlo.
+                GoogleSignInButton(
+                  onPressed: _googleLoading ? null : _loginConGoogle,
+                  cargando: _googleLoading,
+                ),
                 const SizedBox(height: 24),
 
                 // ── Link: recuperar contraseña ────────────────────────────
@@ -184,8 +238,12 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 4),
 
                 // ── Link: registrarse ─────────────────────────────────────
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                // Wrap y no Row: en pantallas estrechas los dos textos
+                // juntos no caben y se recortaba "Regístrate aquí". Así, si
+                // no cabe en una línea, pasa a la siguiente.
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
                       '¿No tienes cuenta? ',

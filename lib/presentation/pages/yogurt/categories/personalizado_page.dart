@@ -9,6 +9,7 @@ import 'package:yogo_vital_app/core/models/tamano_model.dart';
 import 'package:yogo_vital_app/core/providers/pedido_provider.dart';
 import 'package:yogo_vital_app/data/repositories/personalizacion_repository.dart';
 import 'package:yogo_vital_app/presentation/widgets/custom_bottom_nav_bar.dart';
+import 'package:yogo_vital_app/presentation/widgets/imagen_producto.dart';
 
 /// Punto de entrada: usa el PedidoProvider de nivel app (provisto en main.dart).
 /// Resetea el estado al entrar para garantizar un pedido fresco cada vez.
@@ -370,14 +371,24 @@ class _PersonalizadoContentState extends State<_PersonalizadoContent> {
 
   // ── TamanoCard (HU_10 + HU_11) ────────────────────────────────────────────
   Widget _buildTamanosGrid(PedidoProvider pedido) {
+    // Altura fija en píxeles en vez de childAspectRatio.
+    //
+    // childAspectRatio deduce el alto a partir del ancho de la celda, así
+    // que en pantallas estrechas la tarjeta salía más baja y el contenido
+    // —check, nombre y precio— no cabía. Con mainAxisExtent la altura deja
+    // de depender del ancho del teléfono, y se escala con el tamaño de
+    // fuente del sistema, que es lo otro que la hacía crecer.
+    final escala =
+        MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 1.3);
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
-        childAspectRatio: 2.0,
+        mainAxisExtent: 82 * escala,
       ),
       itemCount: _tamanos.length,
       itemBuilder: (_, i) {
@@ -410,9 +421,19 @@ class _PersonalizadoContentState extends State<_PersonalizadoContent> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (selected)
-                  const Icon(Icons.check_circle,
-                      size: 16, color: Colors.white),
+                // El hueco del check se reserva siempre, se vea o no.
+                //
+                // Antes el icono solo existía al seleccionar, así que la
+                // tarjeta crecía 16 px de golpe y se salía de la celda —el
+                // grid tiene childAspectRatio fijo, la altura no se adapta.
+                // De paso, el contenido ya no da un salto al elegir.
+                SizedBox(
+                  height: 16,
+                  child: selected
+                      ? const Icon(Icons.check_circle,
+                          size: 16, color: Colors.white)
+                      : null,
+                ),
                 Text(
                   t.nombre,
                   style: TextStyle(
@@ -478,24 +499,12 @@ class _PersonalizadoContentState extends State<_PersonalizadoContent> {
                     // Miniatura del sabor
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: s.imagenUrl != null
-                          ? Image.network(
-                              s.imagenUrl!,
-                              width: 48,
-                              height: 48,
-                              fit: BoxFit.cover,
-                              loadingBuilder: (context, child, progress) {
-                                if (progress == null) return child;
-                                return Container(
-                                  width: 48,
-                                  height: 48,
-                                  color: Colors.orange[50],
-                                );
-                              },
-                              errorBuilder: (_, __, ___) =>
-                                  _saborPlaceholder(),
-                            )
-                          : _saborPlaceholder(),
+                      child: ImagenProducto(
+                        url: s.imagenUrl,
+                        ancho: 48,
+                        alto: 48,
+                        tamanoIcono: 24,
+                      ),
                     ),
                     const SizedBox(width: 12),
 
@@ -597,15 +606,6 @@ class _PersonalizadoContentState extends State<_PersonalizadoContent> {
     );
   }
 
-  Widget _saborPlaceholder() {
-    return Container(
-      width: 48,
-      height: 48,
-      color: Colors.orange[50],
-      child: const Icon(Icons.icecream, color: Colors.orange, size: 28),
-    );
-  }
-
   // ── IngredienteToggle — frutas y extras (HU_14 + HU_16 + HU_18) ──────────
   Widget _buildIngredientesList(
       {required List<_IngredienteItem> items}) {
@@ -635,20 +635,12 @@ class _PersonalizadoContentState extends State<_PersonalizadoContent> {
                 // Imagen o ícono
                 ClipRRect(
                   borderRadius: BorderRadius.circular(6),
-                  child: item.imagenUrl != null
-                      ? Image.network(
-                          item.imagenUrl!,
-                          width: 40,
-                          height: 40,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) =>
-                              _ingredientePlaceholder(),
-                          loadingBuilder: (context, child, progress) {
-                            if (progress == null) return child;
-                            return _ingredientePlaceholder();
-                          },
-                        )
-                      : _ingredientePlaceholder(),
+                  child: ImagenProducto(
+                    url: item.imagenUrl,
+                    ancho: 40,
+                    alto: 40,
+                    tamanoIcono: 20,
+                  ),
                 ),
                 const SizedBox(width: 12),
 
@@ -709,82 +701,6 @@ class _PersonalizadoContentState extends State<_PersonalizadoContent> {
           ),
         );
       }).toList(),
-    );
-  }
-
-  Widget _ingredientePlaceholder() {
-    return Container(
-      width: 40,
-      height: 40,
-      color: Colors.green[50],
-      child:
-          const Icon(Icons.local_florist, color: Colors.green, size: 22),
-    );
-  }
-
-  // ── HU_17: barra de precio en tiempo real ─────────────────────────────────
-  Widget _buildPrecioBar(PedidoProvider pedido) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(
-            top: BorderSide(color: Colors.grey.shade200, width: 1)),
-        boxShadow: const [
-          BoxShadow(
-              color: Colors.black12,
-              blurRadius: 6,
-              offset: Offset(0, -2)),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Expanded absorbe el espacio libre → el botón nunca recibe ancho infinito
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Total',
-                    style: TextStyle(
-                        color: Colors.grey[600], fontSize: 11)),
-                Text(
-                  _cop.format(pedido.total),
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2E7D32),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // HU_10: botón deshabilitado si no hay tamaño seleccionado
-          ElevatedButton.icon(
-            onPressed: pedido.tamano == null
-                ? null
-                : () => _showResumen(pedido),
-            icon: const Icon(Icons.receipt_long,
-                color: Colors.white, size: 18),
-            label: const Text(
-              'Ver Resumen',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF5B9EF5),
-              disabledBackgroundColor: Colors.grey[300],
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-        ],
-      ),
     );
   }
 

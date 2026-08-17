@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:yogo_vital_app/presentation/widgets/star_rating.dart';
 
 /// Widget compacto de promedio de calificación para catálogo y Home.
-/// Muestra: ★★★★☆ 4.2 (12)  |  "Sin calificaciones" si total == 0
+///
+/// Muestra ★★★★☆ 4.2 (12). Si el producto **no tiene ninguna calificación**
+/// no dibuja nada: mostrar estrellas vacías o un 5.0 de relleno le atribuye
+/// al producto una nota que nadie le ha dado.
 class StarRatingDisplay extends StatelessWidget {
-  final double promedio;
+  /// null = todavía nadie lo ha calificado.
+  final double? promedio;
 
   /// null = no mostrar conteo; 0 = "Sin calificaciones"
   final int? total;
@@ -21,24 +25,19 @@ class StarRatingDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (total != null && total == 0) {
-      return Text(
-        'Sin calificaciones',
-        style: textStyle ??
-            const TextStyle(color: Colors.grey, fontSize: 11),
-      );
-    }
+    final nota = promedio;
+    if (nota == null || total == 0) return const SizedBox.shrink();
 
     final label = total != null
-        ? '${promedio.toStringAsFixed(1)} ($total)'
-        : promedio.toStringAsFixed(1);
+        ? '${nota.toStringAsFixed(1)} ($total)'
+        : nota.toStringAsFixed(1);
 
     return Row(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         StarRating(
-          rating: promedio,
+          rating: nota,
           size: starSize,
           interactive: false,
           activeColor: const Color(0xFFFFB300),

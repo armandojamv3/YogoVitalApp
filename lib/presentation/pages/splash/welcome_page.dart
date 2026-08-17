@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:yogo_vital_app/core/theme/app_theme.dart';
 import 'package:yogo_vital_app/data/repositories/auth_repository.dart';
+import 'package:yogo_vital_app/presentation/widgets/google_sign_in_button.dart';
 
 class WelcomePage extends StatefulWidget {
   const WelcomePage({super.key});
@@ -201,41 +202,9 @@ class _WelcomePageState extends State<WelcomePage> {
                 const SizedBox(height: 20),
 
                 // ── Botón: Continuar con Google ───────────────────────────
-                SizedBox(
-                  height: 56,
-                  child: OutlinedButton(
-                    onPressed: _googleLoading ? null : _signInWithGoogle,
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.black87,
-                      side: const BorderSide(
-                          color: Color(0xFFDADADA), width: 1.5),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(28),
-                      ),
-                    ),
-                    child: _googleLoading
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2.5),
-                          )
-                        : Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              _GoogleG(),
-                              const SizedBox(width: 10),
-                              Text(
-                                'Continuar con Google',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                            ],
-                          ),
-                  ),
+                GoogleSignInButton(
+                  onPressed: _signInWithGoogle,
+                  cargando: _googleLoading,
                 ),
                 const SizedBox(height: 20),
 
@@ -258,73 +227,4 @@ class _WelcomePageState extends State<WelcomePage> {
       ),
     );
   }
-}
-
-/// Google "G" logo rendered via CustomPainter with the 4 brand colors.
-class _GoogleG extends StatelessWidget {
-  const _GoogleG();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 22,
-      height: 22,
-      child: CustomPaint(painter: _GoogleGPainter()),
-    );
-  }
-}
-
-class _GoogleGPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final cx = size.width / 2;
-    final cy = size.height / 2;
-    final r = size.width / 2;
-    final strokeW = size.width * 0.18;
-
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeW
-      ..strokeCap = StrokeCap.butt;
-
-    // Blue  — top (315° → 45° going clockwise, i.e. from -45° span 90°)
-    paint.color = const Color(0xFF4285F4);
-    canvas.drawArc(Rect.fromCircle(center: Offset(cx, cy), radius: r - strokeW / 2),
-        -1.5708 - 0.7854, 1.5708, false, paint); // top-right quadrant
-
-    // Red — right (45° → 135°)
-    paint.color = const Color(0xFFEA4335);
-    canvas.drawArc(Rect.fromCircle(center: Offset(cx, cy), radius: r - strokeW / 2),
-        -0.7854, 1.5708, false, paint);
-
-    // Yellow — bottom (135° → 225°)
-    paint.color = const Color(0xFFFBBC05);
-    canvas.drawArc(Rect.fromCircle(center: Offset(cx, cy), radius: r - strokeW / 2),
-        0.7854, 1.5708, false, paint);
-
-    // Green — left (225° → 315°)
-    paint.color = const Color(0xFF34A853);
-    canvas.drawArc(Rect.fromCircle(center: Offset(cx, cy), radius: r - strokeW / 2),
-        2.3562, 1.5708, false, paint);
-
-    // White inner fill + cutout to create the "C" opening on the right
-    final fillPaint = Paint()
-      ..style = PaintingStyle.fill
-      ..color = Colors.white;
-    canvas.drawCircle(Offset(cx, cy), r - strokeW, fillPaint);
-
-    // Horizontal bar of the G
-    final barPaint = Paint()
-      ..color = const Color(0xFF4285F4)
-      ..style = PaintingStyle.fill;
-    final barTop = cy - strokeW * 0.45;
-    final barBottom = cy + strokeW * 0.45;
-    canvas.drawRect(
-      Rect.fromLTRB(cx, barTop, cx + r - strokeW * 0.3, barBottom),
-      barPaint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

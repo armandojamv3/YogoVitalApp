@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:yogo_vital_app/core/models/sabor.dart';
 import 'package:yogo_vital_app/data/repositories/catalogo_repository.dart';
+import 'package:yogo_vital_app/presentation/widgets/imagen_producto.dart';
 
 /// Buscador de sabores reutilizable (Home, Yogures) vía Icons.search.
 /// Usa la búsqueda nativa de Flutter (showSearch) sobre `sabores.nombre`.
@@ -75,32 +76,12 @@ class SaborSearchDelegate extends SearchDelegate<void> {
             return ListTile(
               leading: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: (s.imagenUrl != null && s.imagenUrl!.isNotEmpty)
-                    ? Image.network(
-                        s.imagenUrl!,
-                        width: 44,
-                        height: 44,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, progress) {
-                          if (progress == null) return child;
-                          return Container(
-                              width: 44, height: 44, color: Colors.orange[50]);
-                        },
-                        errorBuilder: (_, __, ___) => Container(
-                          width: 44,
-                          height: 44,
-                          color: Colors.orange[100],
-                          child: const Icon(Icons.icecream,
-                              color: Colors.orange, size: 22),
-                        ),
-                      )
-                    : Container(
-                        width: 44,
-                        height: 44,
-                        color: Colors.orange[100],
-                        child: const Icon(Icons.icecream,
-                            color: Colors.orange, size: 22),
-                      ),
+                child: ImagenProducto(
+                  url: s.imagenUrl,
+                  ancho: 44,
+                  alto: 44,
+                  tamanoIcono: 22,
+                ),
               ),
               title: Text(s.nombre,
                   style: const TextStyle(fontWeight: FontWeight.w600)),

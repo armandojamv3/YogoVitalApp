@@ -428,10 +428,17 @@ class _TotalRow extends StatelessWidget {
       fontWeight: bold ? FontWeight.bold : FontWeight.normal,
       color: color ?? Colors.black87,
     );
+    // Fila reutilizada por todas las líneas de importe de la factura. La
+    // etiqueta cede primero porque el importe es el dato que no se puede
+    // recortar.
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: style),
+        Flexible(
+          child: Text(label,
+              maxLines: 2, overflow: TextOverflow.ellipsis, style: style),
+        ),
+        const SizedBox(width: 8),
         Text('\$ ${fmtCop.format(valor)} COP', style: style),
       ],
     );

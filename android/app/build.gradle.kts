@@ -13,6 +13,12 @@ android {
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
+        // flutter_local_notifications usa APIs modernas de java.time que no
+        // existen en las versiones antiguas de Android. El "desugaring"
+        // traduce esas llamadas en tiempo de compilación para que funcionen
+        // igual en dispositivos viejos. Sin esto la compilación falla con
+        // "requires core library desugaring to be enabled".
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -43,4 +49,10 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // Biblioteca que acompaña a isCoreLibraryDesugaringEnabled: contiene la
+    // implementación de java.time y demás APIs modernas para Android antiguo.
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

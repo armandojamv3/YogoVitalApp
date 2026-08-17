@@ -8,6 +8,7 @@ import 'package:yogo_vital_app/data/repositories/calificacion_supabase_repositor
 import 'package:yogo_vital_app/data/repositories/personalizacion_repository.dart';
 import 'package:yogo_vital_app/presentation/pages/cart/cart_checkout_page.dart';
 import 'package:yogo_vital_app/presentation/widgets/star_rating_display.dart';
+import 'package:yogo_vital_app/presentation/widgets/imagen_producto.dart';
 
 /// Detalle de un prediseñado — equivalente a ProductDetailPage, que solo
 /// servía para los sabores típicos.
@@ -88,6 +89,9 @@ class _PredisenhadoDetailPageState extends State<PredisenhadoDetailPage> {
       if (!mounted) return;
       setState(() {
         _tamanos = tamanos;
+        // Se preselecciona el primero (el más económico), igual que en los
+        // yogures típicos: quien no quiera cambiar nada puede pedir directo.
+        _tamano = tamanos.isNotEmpty ? tamanos.first : null;
         _cargandoTamanos = false;
       });
     } catch (_) {
@@ -173,34 +177,28 @@ class _PredisenhadoDetailPageState extends State<PredisenhadoDetailPage> {
           child: SizedBox(
             height: 220,
             width: double.infinity,
-            child: (_p.imagenUrl ?? '').startsWith('http')
-                ? Image.network(
-                    _p.imagenUrl!,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (_, child, progress) =>
-                        progress == null ? child : _placeholder(),
-                    errorBuilder: (_, __, ___) => _placeholder(),
-                  )
-                : _placeholder(),
+            child: ImagenProducto(
+              url: _p.imagenUrl,
+              alto: 220,
+              ancho: double.infinity,
+              tamanoIcono: 80,
+            ),
           ),
         ),
-        if (_p.esNuevo || _p.esPopular)
+        if (_p.mostrarComoNuevo || _p.esPopular)
           Positioned(
             top: 12,
             left: 12,
             child: _badge(
-              _p.esNuevo ? 'Nuevo' : 'Popular',
-              _p.esNuevo ? const Color(0xFF2196F3) : const Color(0xFFFF9800),
+              _p.mostrarComoNuevo ? 'Nuevo' : 'Popular',
+              _p.mostrarComoNuevo
+                  ? const Color(0xFF2196F3)
+                  : const Color(0xFFFF9800),
             ),
           ),
       ],
     );
   }
-
-  Widget _placeholder() => Container(
-        color: Colors.orange[100],
-        child: const Icon(Icons.icecream, size: 80, color: Colors.orange),
-      );
 
   Widget _badge(String texto, Color color) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -408,7 +406,13 @@ class _PredisenhadoDetailPageState extends State<PredisenhadoDetailPage> {
               style: TextStyle(color: Colors.grey[600], fontSize: 13),
             )
           else
-            Column(
+            // Wrap y no Column: las tarjetas se acomodan de lado a lado y
+            // saltan de línea solas cuando no caben. Ocupa mucho menos alto
+            // que una fila por tamaño, así que el cliente ve las cuatro
+            // opciones de un vistazo sin desplazarse.
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: _tamanos.map(_buildTamanoOpcion).toList(),
             ),
         ],
@@ -416,39 +420,35 @@ class _PredisenhadoDetailPageState extends State<PredisenhadoDetailPage> {
     );
   }
 
+  /// Tarjeta de un tamaño: nombre arriba, precio debajo.
+  ///
+  /// Mismo diseño que en los yogures típicos. Se quitó el círculo de radio:
+  /// con el relleno de color y el borde grueso ya se ve cuál está elegido, y
+  /// el icono solo robaba ancho a la tarjeta.
   Widget _buildTamanoOpcion(TamanoModel t) {
     final elegido = _tamano?.id == t.id;
     return GestureDetector(
       onTap: () => setState(() => _tamano = t),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: elegido ? const Color(0xFFE8F5E9) : Colors.grey[50],
+          color: elegido ? const Color(0xFF4CAF50) : Colors.grey[100],
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: elegido ? const Color(0xFF4CAF50) : Colors.grey[200]!,
+            color: elegido ? const Color(0xFF4CAF50) : Colors.grey[300]!,
             width: elegido ? 2 : 1,
           ),
         ),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              elegido
-                  ? Icons.radio_button_checked
-                  : Icons.radio_button_unchecked,
-              size: 20,
-              color: elegido ? const Color(0xFF4CAF50) : Colors.grey[400],
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                t.nombre,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: elegido ? FontWeight.w600 : FontWeight.w500,
-                ),
+            Text(
+              t.nombre,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: elegido ? Colors.white : Colors.black87,
               ),
             ),
             Text(
@@ -456,9 +456,9 @@ class _PredisenhadoDetailPageState extends State<PredisenhadoDetailPage> {
               // suelto: es el número que va a pagar.
               _cop.format(_p.precioTotal + t.precioBase),
               style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: elegido ? const Color(0xFF2E7D32) : Colors.grey[700],
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: elegido ? Colors.white70 : const Color(0xFF2E7D32),
               ),
             ),
           ],

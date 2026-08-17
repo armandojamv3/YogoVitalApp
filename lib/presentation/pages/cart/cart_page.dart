@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yogo_vital_app/core/models/cart_model.dart';
 import 'package:yogo_vital_app/presentation/pages/cart/cart_checkout_page.dart';
 import 'package:yogo_vital_app/presentation/widgets/custom_bottom_nav_bar.dart';
+import 'package:yogo_vital_app/presentation/widgets/imagen_producto.dart';
 
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
@@ -134,12 +137,79 @@ class _CartPageState extends State<CartPage> {
               const Divider(height: 16, thickness: 0.5),
           itemBuilder: (context, index) {
             final it = items[index];
-            return _CartItemRow(item: it, cart: cart);
+            // Deslizar para eliminar. CartModel.removeItem existía desde
+            // siempre, pero ninguna pantalla la llamaba: no había forma de
+            // sacar un producto del carrito.
+            return Dismissible(
+              // La clave incluye el tamaño porque el mismo producto puede
+              // estar dos veces con tamaños distintos, y son líneas
+              // separadas.
+              key: ValueKey('${it.id}_${it.size}'),
+              direction: DismissDirection.endToStart,
+              background: Container(
+                alignment: Alignment.centerRight,
+                padding: const EdgeInsets.only(right: 20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEF5350),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.delete_outline,
+                    color: Colors.white, size: 26),
+              ),
+              onDismissed: (_) => _quitarDelCarrito(context, cart, it),
+              child: _CartItemRow(
+                item: it,
+                cart: cart,
+                onEliminar: () => _quitarDelCarrito(context, cart, it),
+              ),
+            );
           },
         ),
       ),
     );
   }
+
+  /// Quita un producto del carrito y ofrece deshacerlo.
+  ///
+  /// El "Deshacer" importa: deslizar es fácil de hacer sin querer, y sin
+  /// esa salida el usuario tendría que volver al catálogo a buscar el
+  /// producto otra vez.
+  void _quitarDelCarrito(
+      BuildContext context, CartModel cart, CartItem item) {
+    cart.removeItem(item.id, item.size);
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+
+    final controlador = messenger.showSnackBar(
+      SnackBar(
+        content: Text('${item.title} eliminado del carrito'),
+        duration: _duracionAviso,
+        action: SnackBarAction(
+          label: 'Deshacer',
+          textColor: Colors.white,
+          // Se vuelve a añadir el mismo objeto, así que conserva cantidad,
+          // tamaño y dulzura.
+          onPressed: () => cart.addItem(item),
+        ),
+      ),
+    );
+
+    // Cerrarlo a mano pasado el tiempo.
+    //
+    // Normalmente Flutter lo hace solo con `duration`, pero cuando el aviso
+    // lleva un botón y el teléfono tiene activada la navegación accesible
+    // (TalkBack y similares), el framework desactiva el temporizador a
+    // propósito, para que a nadie se le escape el "Deshacer" antes de poder
+    // pulsarlo. En ese caso el aviso se queda fijo hasta deslizarlo.
+    var visible = true;
+    unawaited(controlador.closed.then((_) => visible = false));
+    Timer(_duracionAviso, () {
+      if (visible && mounted) controlador.close();
+    });
+  }
+
+  static const _duracionAviso = Duration(seconds: 4);
 
   Widget _buildSubtotalBar(
     BuildContext context,
@@ -194,7 +264,15 @@ class _CartItemRow extends StatelessWidget {
   final CartItem item;
   final CartModel cart;
 
-  const _CartItemRow({required this.item, required this.cart});
+  /// Eliminar el producto. Se ofrece también como botón y no solo con el
+  /// gesto de deslizar, porque hay bastante gente que nunca lo descubre.
+  final VoidCallback onEliminar;
+
+  const _CartItemRow({
+    required this.item,
+    required this.cart,
+    required this.onEliminar,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -232,22 +310,12 @@ class _CartItemRow extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(6),
               child: it.image.startsWith('http')
-                  ? Image.network(
-                      it.image,
-                      fit: BoxFit.contain,
-                      loadingBuilder: (context, child, progress) {
-                        if (progress == null) return child;
-                        return const Icon(
-                          Icons.icecream,
-                          size: 36,
-                          color: Colors.orange,
-                        );
-                      },
-                      errorBuilder: (_, __, ___) => const Icon(
-                        Icons.icecream,
-                        size: 36,
-                        color: Colors.orange,
-                      ),
+                  ? ImagenProducto(
+                      url: it.image,
+                      ancho: 54,
+                      alto: 54,
+                      ajuste: BoxFit.contain,
+                      tamanoIcono: 36,
                     )
                   : Image.asset(
                       it.image,
@@ -264,15 +332,24 @@ class _CartItemRow extends StatelessWidget {
 
         const SizedBox(width: 12),
 
+        // flex 5 contra 3: repartidos por igual, a la columna del medio le
+        // tocaban ~99 px y la fila de cantidad necesita ~102. De ahí el
+        // desbordamiento de 5 px. El precio puede ceder, los botones no.
         Expanded(
+          flex: 5,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 it.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
+              // Separaciones de 6 en vez de 8: los dos botones y la caja de
+              // la cantidad tienen ancho fijo, así que en pantallas
+              // estrechas esta fila se salía de su columna.
               Row(
                 children: [
                   _QtyButton(
@@ -283,10 +360,10 @@ class _CartItemRow extends StatelessWidget {
                       it.qty > 1 ? it.qty - 1 : 1,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
+                      horizontal: 10,
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
@@ -298,7 +375,7 @@ class _CartItemRow extends StatelessWidget {
                       textAlign: TextAlign.center,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   _QtyButton(
                     icon: Icons.add,
                     onTap: () => cart.updateQty(it.id, it.size, it.qty + 1),
@@ -309,19 +386,39 @@ class _CartItemRow extends StatelessWidget {
           ),
         ),
 
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              'COP ${it.price}',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${it.price} x ${it.qty}',
-              style: const TextStyle(color: Colors.grey, fontSize: 12),
-            ),
-          ],
+        const SizedBox(width: 8),
+
+        // Flexible: la columna del precio tomaba su ancho natural y le
+        // quitaba sitio al nombre del producto, que quedaba recortado.
+        Flexible(
+          flex: 3,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                'COP ${it.price}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${it.price} x ${it.qty}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+              InkWell(
+                onTap: onEliminar,
+                borderRadius: BorderRadius.circular(6),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  child: Icon(Icons.delete_outline,
+                      size: 20, color: Color(0xFFEF5350)),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -340,8 +437,8 @@ class _QtyButton extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
       child: Container(
-        width: 28,
-        height: 28,
+        width: 26,
+        height: 26,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),

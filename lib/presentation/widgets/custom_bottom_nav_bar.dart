@@ -37,25 +37,39 @@ class CustomBottomNavBar extends StatelessWidget {
         border: Border(top: BorderSide(color: Colors.grey.shade300, width: 1)),
         color: Colors.white,
       ),
-      // 60 px dejaban el icono y la etiqueta pegados al borde inferior: la
-      // barra queda justo encima del indicador de gestos del teléfono y se
-      // veía apretada. Un poco de aire arriba y abajo lo resuelve sin
-      // robarle altura real al contenido de la pantalla.
-      padding: const EdgeInsets.only(top: 6, bottom: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: List.generate(_items.length, (index) {
-          final item = _items[index];
-          final isSelected = index == currentIndex;
+      // El SafeArea es lo que impide que la barra del sistema (los tres
+      // botones de Android, o la línea de gestos) se monte encima de estas
+      // pestañas. Sin él, en un teléfono con botones el sistema se queda
+      // con los toques y la barra de la app deja de responder.
+      //
+      // Va DENTRO del Container, no fuera, para que el fondo blanco y la
+      // línea superior lleguen hasta el borde de la pantalla; si se pone
+      // fuera queda una franja del color del Scaffold debajo.
+      //
+      // top: false porque de la parte de arriba ya se ocupa el AppBar.
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          // 60 px dejaban el icono y la etiqueta pegados al borde inferior:
+          // un poco de aire arriba y abajo lo resuelve sin robarle altura
+          // real al contenido de la pantalla.
+          padding: const EdgeInsets.only(top: 6, bottom: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(_items.length, (index) {
+              final item = _items[index];
+              final isSelected = index == currentIndex;
 
-          return _buildNavItem(
-            context,
-            index,
-            item.icon,
-            item.label,
-            isSelected,
-          );
-        }),
+              return _buildNavItem(
+                context,
+                index,
+                item.icon,
+                item.label,
+                isSelected,
+              );
+            }),
+          ),
+        ),
       ),
     );
   }

@@ -256,12 +256,16 @@ class _HistorialDetalleScreenState extends State<HistorialDetalleScreen> {
                     children: [
                       const Text('Total',
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                      Text(
-                        '\$ ${fmt.format(p.total)} COP',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF0E8498),
+                      Flexible(
+                        child: Text(
+                          '\$ ${fmt.format(p.total)} COP',
+                          textAlign: TextAlign.end,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0E8498),
+                          ),
                         ),
                       ),
                     ],

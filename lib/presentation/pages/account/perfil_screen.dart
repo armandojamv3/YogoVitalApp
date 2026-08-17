@@ -80,7 +80,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
             children: [
               Icon(Icons.check_circle_rounded, color: Colors.white),
               SizedBox(width: 10),
-              Text('Perfil actualizado correctamente'),
+              Expanded(child: Text('Perfil actualizado correctamente')),
             ],
           ),
           backgroundColor: Color(0xFF4CAF50),
@@ -145,7 +145,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
             children: [
               Icon(Icons.check_circle_rounded, color: Colors.white),
               SizedBox(width: 10),
-              Text('Contraseña actualizada correctamente'),
+              Expanded(child: Text('Contraseña actualizada correctamente')),
             ],
           ),
           backgroundColor: Color(0xFF4CAF50),
@@ -424,11 +424,18 @@ class _PerfilScreenState extends State<PerfilScreen> {
             children: [
               Icon(icon, size: 18, color: Colors.grey[500]),
               const SizedBox(width: 10),
-              Text(
-                value,
-                style: TextStyle(color: Colors.grey[600], fontSize: 15),
+              // Expanded + ellipsis: un correo largo se salía de la caja y
+              // Flutter marcaba el desbordamiento. Con Spacer el texto tenía
+              // tamaño fijo y no cedía nada.
+              Expanded(
+                child: Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: Colors.grey[600], fontSize: 15),
+                ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               Icon(Icons.lock_outline, size: 14, color: Colors.grey[400]),
             ],
           ),

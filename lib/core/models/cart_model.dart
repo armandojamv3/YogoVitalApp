@@ -19,6 +19,13 @@ class CartItem {
   /// los ítems que no llevan tamaño.
   final String tamanoId;
 
+  /// Nivel de dulzura elegido: 'Bajo', 'Normal' o 'Alto'.
+  ///
+  /// Lo elige el cliente en el detalle del producto. Antes solo existía en
+  /// el personalizador, así que un yogur típico pedido desde el catálogo
+  /// llegaba siempre con el valor por defecto.
+  final String dulzura;
+
   int qty;
   bool checked;
   final String tipo; // 'personalizado' o 'tradicional'
@@ -30,6 +37,7 @@ class CartItem {
     required this.image,
     required this.size,
     this.tamanoId = '',
+    this.dulzura = 'Normal',
     this.qty = 1,
     this.checked = true,
     this.tipo = 'personalizado',
@@ -42,6 +50,7 @@ class CartItem {
         'image': image,
         'size': size,
         'tamano_id': tamanoId,
+        'dulzura': dulzura,
         'qty': qty,
         'checked': checked ? 1 : 0,
         'tipo': tipo,
@@ -54,6 +63,7 @@ class CartItem {
         image: row['image']?.toString() ?? '',
         size: row['size']?.toString() ?? '',
         tamanoId: row['tamano_id']?.toString() ?? '',
+        dulzura: row['dulzura']?.toString() ?? 'Normal',
         qty: (row['qty'] as num?)?.toInt() ?? 1,
         // SQLite guarda los booleanos como 0/1.
         checked: ((row['checked'] as num?)?.toInt() ?? 1) == 1,

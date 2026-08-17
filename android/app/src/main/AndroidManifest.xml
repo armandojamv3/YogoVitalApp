@@ -13,7 +13,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
     <application
-        android:label="yogo_vital_app"
+        android:label="Yogo Vital"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

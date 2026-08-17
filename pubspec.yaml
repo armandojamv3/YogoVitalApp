@@ -71,6 +71,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -86,3 +87,27 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/images/
+# ── Icono de la aplicación ─────────────────────────────────────────────────
+# Genera los iconos de Android, iOS y web a partir del logo.
+# Se regenera con:  dart run flutter_launcher_icons
+#
+# Hay dos imágenes a propósito:
+#   · icono.png        el logo sobre fondo blanco, ocupando el 80%. Lo usan
+#                      iOS y las versiones antiguas de Android, que muestran
+#                      la imagen entera.
+#   · icono_frente.png el logo sobre fondo transparente, ocupando el 62%. Es
+#                      la capa frontal del icono adaptativo de Android, que
+#                      el sistema recorta con la forma que tenga el teléfono
+#                      (círculo, cuadrado redondeado, gota). Si el dibujo va
+#                      muy al borde, se le comen las puntas.
+flutter_launcher_icons:
+  image_path: "assets/icon/icono.png"
+  android: true
+  ios: true
+  # iOS no admite transparencia en el icono; sin esto App Store lo rechaza.
+  remove_alpha_ios: true
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/icon/icono_frente.png"
+  web:
+    generate: true
+    image_path: "assets/icon/icono.png"

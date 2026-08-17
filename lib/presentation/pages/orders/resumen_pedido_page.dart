@@ -353,12 +353,17 @@ class _ResumenPedidoPageState extends State<ResumenPedidoPage> {
               const Text('Total',
                   style: TextStyle(
                       fontWeight: FontWeight.bold, fontSize: 16)),
-              Text(
-                _cop.format(pedido.total),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2E7D32),
+              Flexible(
+                child: Text(
+                  _cop.format(pedido.total),
+                  textAlign: TextAlign.end,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2E7D32),
+                  ),
                 ),
               ),
             ],
@@ -425,17 +430,26 @@ class _ResumenPedidoPageState extends State<ResumenPedidoPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Mismo arreglo que en CartCheckoutPage: el título y el botón
+          // "Cambiar" no caben juntos en pantallas estrechas si ninguno
+          // cede espacio.
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('📍 Dirección de entrega',
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 15)),
+              const Expanded(
+                child: Text('📍 Dirección de entrega',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 15)),
+              ),
               TextButton.icon(
                 onPressed: _openSelector,
-                icon: const Icon(Icons.edit_location_alt,
-                    size: 16),
+                icon: const Icon(Icons.edit_location_alt, size: 16),
                 label: const Text('Cambiar'),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  visualDensity: VisualDensity.compact,
+                ),
               ),
             ],
           ),

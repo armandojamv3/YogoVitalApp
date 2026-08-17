@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -46,23 +48,139 @@ const _supabaseAnonKey =
 /// llega a un listener que no tiene BuildContext.
 final navigatorKey = GlobalKey<NavigatorState>();
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('es', null);
-  await Supabase.initialize(url: _supabaseUrl, anonKey: _supabaseAnonKey);
+  // Se pinta ANTES de inicializar nada. Ver ArranqueApp.
+  runApp(const ArranqueApp());
+}
 
-  // No se espera con await a propósito: si Firebase tarda o falla, la app
-  // debe arrancar igual. Sin push se pierden los avisos con la app cerrada,
-  // pero las notificaciones in-app se siguen guardando en Supabase.
-  PushService.instance.iniciar();
+/// Future compartido de la inicialización de Supabase.
+///
+/// Se guarda fuera del widget para que el botón "Reintentar" vuelva a
+/// esperar la MISMA inicialización en vez de lanzar otra. Llamar dos veces a
+/// `Supabase.initialize` deja la librería en un estado indefinido.
+Future<Supabase>? _futuroSupabase;
 
-  _escucharRecuperacionDePassword();
-  _atarPushAlCicloDeSesion();
+/// Pantalla de arranque de la app.
+///
+/// ── Por qué existe ────────────────────────────────────────────────────
+/// Antes `main()` hacía `await Supabase.initialize(...)` **antes** de llamar
+/// a `runApp`. Ese await no es trabajo local: supabase_flutter recupera la
+/// sesión guardada y, si el token ya caducó, pide uno nuevo por red. Con
+/// cobertura mala esa petición tarda lo que tarde el tiempo de espera de
+/// HTTP, y mientras tanto la app no ha pintado ni un píxel: el teléfono se
+/// queda en la pantalla de arranque del sistema y parece colgada.
+///
+/// Ahora se pinta primero y se inicializa después, con un límite de tiempo y
+/// una salida si falla, en vez de una espera sin final visible.
+class ArranqueApp extends StatefulWidget {
+  const ArranqueApp({super.key});
 
-  final authRemote = AuthRemoteDataSource();
-  final authRepo = AuthRepository(remote: authRemote);
+  @override
+  State<ArranqueApp> createState() => _ArranqueAppState();
+}
 
-  runApp(MyApp(authRepository: authRepo));
+enum _Fase { cargando, listo, error }
+
+class _ArranqueAppState extends State<ArranqueApp> {
+  _Fase _fase = _Fase.cargando;
+  String? _error;
+  AuthRepository? _authRepo;
+
+  @override
+  void initState() {
+    super.initState();
+    _arrancar();
+  }
+
+  Future<void> _arrancar() async {
+    setState(() {
+      _fase = _Fase.cargando;
+      _error = null;
+    });
+
+    try {
+      await initializeDateFormatting('es', null);
+
+      _futuroSupabase ??= Supabase.initialize(
+        url: _supabaseUrl,
+        anonKey: _supabaseAnonKey,
+      );
+      await _futuroSupabase!.timeout(const Duration(seconds: 20));
+
+      // No se espera con await a propósito: si Firebase tarda o falla, la
+      // app debe arrancar igual. Sin push se pierden los avisos con la app
+      // cerrada, pero las notificaciones in-app se siguen guardando en
+      // Supabase.
+      PushService.instance.iniciar();
+
+      _escucharRecuperacionDePassword();
+      _atarPushAlCicloDeSesion();
+
+      _authRepo = AuthRepository(remote: AuthRemoteDataSource());
+
+      if (!mounted) return;
+      setState(() => _fase = _Fase.listo);
+    } catch (e) {
+      debugPrint('[Arranque] falló la inicialización: $e');
+      if (!mounted) return;
+      setState(() {
+        _fase = _Fase.error;
+        _error = e is TimeoutException
+            ? 'No se pudo conectar. Revisa tu conexión a internet.'
+            : 'No se pudo iniciar la aplicación.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_fase == _Fase.listo) {
+      return MyApp(authRepository: _authRepo!);
+    }
+
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light,
+      // Blanco, igual que la pantalla de arranque de Android (ver
+      // res/values/styles.xml). Si aquí se pone otro color, el usuario ve un
+      // salto de fondo justo cuando Flutter toma el relevo.
+      home: Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset('assets/images/logo.png', width: 140),
+                const SizedBox(height: 28),
+                if (_fase == _Fase.cargando)
+                  const CircularProgressIndicator(color: Color(0xFF5B9EF5))
+                else ...[
+                  Text(
+                    _error ?? 'No se pudo iniciar la aplicación.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        color: Color(0xFF444444), fontSize: 15),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: _arrancar,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF5B9EF5),
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Reintentar'),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Registra el dispositivo para recibir push al iniciar sesión.
@@ -157,7 +275,10 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
-        title: 'Yogo Vital App',
+        // Es el nombre que se ve en el selector de apps recientes de
+        // Android. Se deja igual que el del icono para que no aparezcan
+        // dos nombres distintos para la misma app.
+        title: 'Yogo Vital',
         theme: AppTheme.light,
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
         supportedLocales: const [
@@ -165,6 +286,22 @@ class MyApp extends StatelessWidget {
           Locale('en'),
         ],
         locale: const Locale('es'),
+        // Limita cuánto puede crecer el texto por la preferencia de tamaño
+        // de fuente del sistema.
+        //
+        // Buena parte de las pantallas tiene alturas y anchos fijos, así que
+        // con la fuente del teléfono muy grande el contenido se sale de su
+        // caja y Flutter pinta las franjas amarillas de desbordamiento. Se
+        // vio en un Honor pero no en el emulador, que va al 100%.
+        //
+        // 1.3 es un punto medio: sigue respetando a quien necesita el texto
+        // más grande, pero evita que la app se rompa en accesibilidad
+        // extrema. No sustituye a arreglar los diseños rígidos uno a uno,
+        // solo acota el daño mientras tanto.
+        builder: (context, child) => MediaQuery.withClampedTextScaling(
+          maxScaleFactor: 1.3,
+          child: child!,
+        ),
         initialRoute: hasSession ? '/home' : '/',
         // El pedidoId de '/estado-pedido' viaja embebido en la URL
         // (/estado-pedido/<id>) en vez de como `arguments`, para que

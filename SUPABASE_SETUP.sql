@@ -87,7 +87,8 @@ CREATE TABLE IF NOT EXISTS public.sabores (
   descripcion           TEXT    NOT NULL DEFAULT '',
   precio_base           NUMERIC(10,2) NOT NULL CHECK (precio_base > 0),
   imagen_url            TEXT,
-  calificacion_promedio NUMERIC(3,2) NOT NULL DEFAULT 5.0,
+  -- NULL = todavía nadie lo ha calificado (ver migración 0050).
+  calificacion_promedio NUMERIC(3,2),
   activo                BOOLEAN NOT NULL DEFAULT true,
   created_at            TIMESTAMPTZ NOT NULL DEFAULT now()
 );

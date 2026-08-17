@@ -9,6 +9,7 @@ import 'package:yogo_vital_app/presentation/widgets/favorite_button.dart';
 import 'package:yogo_vital_app/presentation/widgets/notification_bell.dart';
 import 'package:yogo_vital_app/presentation/widgets/sabor_search_delegate.dart';
 import 'package:yogo_vital_app/presentation/widgets/star_rating_display.dart';
+import 'package:yogo_vital_app/presentation/widgets/imagen_producto.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -71,9 +72,10 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _nuevos = sabores;
         _promedios = promedios;
+        // Los que nadie ha calificado van al final, no arriba.
         _masPedidos = List<Sabor>.from(sabores)
-          ..sort((a, b) =>
-              b.calificacionPromedio.compareTo(a.calificacionPromedio));
+          ..sort((a, b) => (b.calificacionPromedio ?? 0)
+              .compareTo(a.calificacionPromedio ?? 0));
         if (_masPedidos.length > 3) _masPedidos = _masPedidos.sublist(0, 3);
         _loading = false;
       });
@@ -290,8 +292,15 @@ class _HomePageState extends State<HomePage> {
     // Skeleton mientras carga
     final count = _loading ? 4 : (items.isEmpty ? 1 : items.length);
 
+    // La altura fija de 220 px se desbordaba en teléfonos con el tamaño de
+    // fuente del sistema por encima del normal: el texto crece, la caja no,
+    // y Flutter recorta por abajo. Se escala con la preferencia del usuario,
+    // con tope para que no se descontrole en accesibilidad extrema.
+    final escalaTexto =
+        MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 1.5);
+
     return SizedBox(
-      height: 220,
+      height: 220 * escalaTexto,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.only(left: 20, right: 8),
@@ -608,28 +617,14 @@ class _HomePageState extends State<HomePage> {
             size: height * 0.5, color: Colors.orange),
       );
     }
-    return Image.network(
-      url,
-      width: width,
-      height: height,
-      fit: BoxFit.cover,
-      loadingBuilder: (context, child, progress) {
-        if (progress == null) return child;
-        return Container(
-          width: width,
-          height: height,
-          color: const Color(0xFFE0E0E0),
-          child:
-              const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-        );
-      },
-      errorBuilder: (_, __, ___) => Container(
-        width: width,
-        height: height,
-        color: Colors.orange[100],
-        child: Icon(Icons.icecream,
-            size: height * 0.5, color: Colors.orange),
-      ),
+    // Con caché en disco: Image.network volvía a descargar la foto cada
+    // vez que se reconstruía el widget, así que desplazar la lista pedía
+    // todas las imágenes otra vez a Supabase.
+    return ImagenProducto(
+      url: url,
+      ancho: width,
+      alto: height,
+      tamanoIcono: height * 0.5,
     );
   }
 }
