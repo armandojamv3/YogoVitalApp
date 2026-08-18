@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -258,6 +259,40 @@ class MyApp extends StatelessWidget {
     return cart;
   }
 
+  /// Las cinco secciones de la barra inferior.
+  ///
+  /// Están aparte del mapa `routes` porque necesitan una ruta sin animación
+  /// (ver onGenerateRoute).
+  static final Map<String, Widget Function()> _pestanas = {
+    '/home': () => const HomePage(),
+    '/yogurt': () => const YogurtPage(),
+    '/cart': () => const CartPage(),
+    '/history': () => const HistoryPage(),
+    '/account': () => const AccountPage(),
+  };
+
+  /// Ruta con la que arranca la app.
+  ///
+  /// En web la ruta de partida la manda la URL del navegador. Al fijar
+  /// `initialRoute` a secas, Flutter la ignoraba: daba igual que la
+  /// dirección dijera `/admin/dashboard`, siempre entraba por `/home`. Por
+  /// eso al abrir la app en el iPhone aparecía primero la pantalla
+  /// principal y solo después se podía llegar a administración.
+  ///
+  /// Con la estrategia por defecto de Flutter web la ruta viaja en el
+  /// fragmento de la URL (`.../#/admin/dashboard`), de ahí el `fragment`.
+  ///
+  /// Sin sesión se ignora la URL a propósito: no tiene sentido llevar a
+  /// nadie a una pantalla interna antes de iniciar sesión.
+  String _rutaInicial(bool haySesion) {
+    if (!haySesion) return '/';
+    if (kIsWeb) {
+      final deLaUrl = Uri.base.fragment;
+      if (deLaUrl.isNotEmpty && deLaUrl != '/') return deLaUrl;
+    }
+    return '/home';
+  }
+
   @override
   Widget build(BuildContext context) {
     final hasSession =
@@ -302,7 +337,12 @@ class MyApp extends StatelessWidget {
           maxScaleFactor: 1.3,
           child: child!,
         ),
-        initialRoute: hasSession ? '/home' : '/',
+        initialRoute: _rutaInicial(hasSession),
+        // Si la URL trae una ruta que no existe, se vuelve al inicio en vez
+        // de reventar con la pantalla de error de Flutter.
+        onUnknownRoute: (_) => MaterialPageRoute(
+          builder: (_) => hasSession ? const HomePage() : const WelcomePage(),
+        ),
         // El pedidoId de '/estado-pedido' viaja embebido en la URL
         // (/estado-pedido/<id>) en vez de como `arguments`, para que
         // sobreviva a un F5 / recarga del navegador en Flutter Web
@@ -318,6 +358,26 @@ class MyApp extends StatelessWidget {
               builder: (_) => EstadoPedidoSupabasePage(pedidoId: id),
             );
           }
+
+          // Pestañas de la barra inferior: se abren sin animación.
+          //
+          // Con MaterialPageRoute cada cambio de pestaña usa la animación de
+          // la plataforma. En iOS esa animación es un deslizamiento desde la
+          // derecha, la misma que al entrar a un detalle, así que pasar de
+          // Yogures a Historial parecía que te metías más adentro en vez de
+          // cambiar de sección. Una barra de pestañas no navega hacia
+          // dentro: cambia de sitio, y eso no se anuncia con una animación
+          // de avance.
+          final pestana = _pestanas[settings.name];
+          if (pestana != null) {
+            return PageRouteBuilder(
+              settings: settings,
+              pageBuilder: (_, __, ___) => pestana(),
+              transitionDuration: Duration.zero,
+              reverseTransitionDuration: Duration.zero,
+            );
+          }
+
           return null;
         },
         routes: {
@@ -328,12 +388,9 @@ class MyApp extends StatelessWidget {
           '/reset-password': (_) => ResetPasswordPage(
                 initialToken: Uri.base.queryParameters['token'],
               ),
-          '/home': (_) => const HomePage(),
-          '/yogurt': (_) => const YogurtPage(),
-          '/cart': (_) => const CartPage(),
+          // Las cinco pestañas de la barra inferior NO están aquí: se
+          // resuelven en onGenerateRoute para poder abrirlas sin animación.
           '/detail': (_) => const ProductDetailPage(),
-          '/history': (_) => const HistoryPage(),
-          '/account': (_) => const AccountPage(),
           '/admin': (_) => const AdminOrdersPage(),
           // Sprint 4: resumen + dirección + confirmación
           '/resumen-pedido': (_) => const ResumenPedidoPage(),
