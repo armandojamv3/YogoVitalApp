@@ -10,6 +10,7 @@ import 'package:yogo_vital_app/presentation/widgets/notification_bell.dart';
 import 'package:yogo_vital_app/presentation/widgets/sabor_search_delegate.dart';
 import 'package:yogo_vital_app/presentation/widgets/star_rating_display.dart';
 import 'package:yogo_vital_app/presentation/widgets/imagen_producto.dart';
+import 'package:yogo_vital_app/core/services/precios_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -58,12 +59,25 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  /// Precio con el que se anuncia un sabor en una tarjeta.
+  ///
+  /// En la tarjeta todavía no hay tamaño elegido, así que se muestra el más
+  /// barato y se avisa con "Desde". Antes aquí salía `precio_base`, que
+  /// desde la migración 0051 no se cobra.
+  String _precioDesde(Sabor s) {
+    final desde = PreciosService.desde(s.recargo);
+    return desde == null ? '' : 'Desde \$${desde.toStringAsFixed(0)}';
+  }
+
   // HU_07: cargar sabores + promedios live de calificaciones (Sprint 7)
   Future<void> _loadData() async {
     try {
       final results = await Future.wait([
         _repo.getSaboresHome(limit: 10),
         _calificacionRepo.getPromediosPorSabores(),
+        // Hace falta para poder escribir "Desde $X" en las tarjetas: el
+        // precio de partida es el del tamaño más barato.
+        PreciosService.precargar(),
       ]);
       if (!mounted) return;
       final sabores = results[0] as List<Sabor>;
@@ -348,6 +362,7 @@ class _HomePageState extends State<HomePage> {
         'description': s.descripcion,
         'image': s.imagenUrl ?? '',
         'precio': s.precioBase,
+        'recargo': s.recargo,
         'rating': s.calificacionPromedio,
       }),
       child: Container(
@@ -398,7 +413,9 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '\$${s.precioBase.toStringAsFixed(0)}',
+                    _precioDesde(s),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                         color: Color(0xFF2E7D32),
                         fontWeight: FontWeight.w600,
@@ -438,6 +455,7 @@ class _HomePageState extends State<HomePage> {
         'description': s.descripcion,
         'image': s.imagenUrl ?? '',
         'precio': s.precioBase,
+        'recargo': s.recargo,
         'rating': s.calificacionPromedio,
       }),
       child: Container(
@@ -486,13 +504,24 @@ class _HomePageState extends State<HomePage> {
                         fontSize: 12, color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 8),
+                  // El precio va en Flexible y las estrellas no.
+                  //
+                  // "Desde $5.000" es bastante más largo que el "$8.000" de
+                  // antes, y en una tarjeta estrecha se comía el espacio de
+                  // las estrellas. Las estrellas tienen ancho fijo y no
+                  // pueden encogerse, así que el que cede es el texto.
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('\$${s.precioBase.toStringAsFixed(0)}',
-                          style: const TextStyle(
-                              color: Color(0xFF2E7D32),
-                              fontWeight: FontWeight.w600)),
+                      Flexible(
+                        child: Text(_precioDesde(s),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: Color(0xFF2E7D32),
+                                fontWeight: FontWeight.w600)),
+                      ),
+                      const SizedBox(width: 6),
                       StarRatingDisplay(
                         promedio: _promedios[s.id]?.promedio ??
                             s.calificacionPromedio,

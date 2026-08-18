@@ -484,7 +484,9 @@ class _SaborCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          'COP ${fmt.format(sabor.precioBase)}',
+                          sabor.recargo > 0
+                              ? '+ COP ${fmt.format(sabor.recargo)}'
+                              : 'Sin recargo',
                           style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
@@ -614,7 +616,7 @@ class _SaborFormPageState extends State<SaborFormPage> {
     _nombreCtrl = TextEditingController(text: s?.nombre ?? '');
     _descripcionCtrl = TextEditingController(text: s?.descripcion ?? '');
     _precioCtrl = TextEditingController(
-      text: s != null ? s.precioBase.toStringAsFixed(0) : '',
+      text: s != null ? s.recargo.toStringAsFixed(0) : '',
     );
     _imagenUrlExistente = s?.imagenUrl;
   }
@@ -671,7 +673,10 @@ class _SaborFormPageState extends State<SaborFormPage> {
     final prov = context.read<SaborAdminProvider>();
     final nombre = _nombreCtrl.text.trim();
     final descripcion = _descripcionCtrl.text.trim();
-    final precio = double.parse(_precioCtrl.text.trim().replaceAll(',', '.'));
+    // Vacío se toma como 0: la mayoría de los sabores no lleva recargo y
+    // obligar a escribir un cero es fricción sin motivo.
+    final texto = _precioCtrl.text.trim().replaceAll(',', '.');
+    final recargo = texto.isEmpty ? 0.0 : double.parse(texto);
 
     // Si se eligió una foto nueva, subirla primero a Storage y usar esa
     // URL. Si no, se conserva la que ya tenía (o ninguna, si es nuevo).
@@ -701,14 +706,14 @@ class _SaborFormPageState extends State<SaborFormPage> {
         id: widget.saborAEditar!.id,
         nombre: nombre,
         descripcion: descripcion,
-        precioBase: precio,
+        recargo: recargo,
         imagenUrl: imagenUrl,
       );
     } else {
       ok = await prov.agregarSabor(
         nombre: nombre,
         descripcion: descripcion,
-        precioBase: precio,
+        recargo: recargo,
         imagenUrl: imagenUrl,
       );
     }
@@ -844,12 +849,12 @@ class _SaborFormPageState extends State<SaborFormPage> {
                       ),
                       const SizedBox(height: 18),
 
-                      // ── Campo: Precio base ────────────────────────────
-                      _buildLabel('Precio base (COP) *'),
+                      // ── Campo: Recargo del sabor ──────────────────────
+                      _buildLabel('Recargo del sabor (COP)'),
                       const SizedBox(height: 6),
                       _StyledField(
                         controller: _precioCtrl,
-                        hintText: 'Ej: 2500',
+                        hintText: 'Ej: 1500 — deja vacío si no lleva recargo',
                         prefixIcon: Icons.attach_money_rounded,
                         keyboardType: const TextInputType.numberWithOptions(
                             decimal: true),
@@ -859,19 +864,30 @@ class _SaborFormPageState extends State<SaborFormPage> {
                         ],
                         textInputAction: TextInputAction.done,
                         validator: (v) {
-                          if (v == null || v.trim().isEmpty) {
-                            return 'El precio es obligatorio';
-                          }
+                          // Vacío es válido: significa sin recargo.
+                          if (v == null || v.trim().isEmpty) return null;
                           final parsed = double.tryParse(
                               v.trim().replaceAll(',', '.'));
                           if (parsed == null) {
                             return 'Ingresa un número válido';
                           }
-                          if (parsed <= 0) {
-                            return 'El precio debe ser mayor a 0';
+                          if (parsed < 0) {
+                            return 'El recargo no puede ser negativo';
                           }
                           return null;
                         },
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'El precio final lo pone el tamaño. Este número es '
+                        'lo que este sabor suma encima: un chontaduro cuesta '
+                        'más que una piña porque la fruta cuesta más. Déjalo '
+                        'vacío en los sabores estándar.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[600],
+                          height: 1.35,
+                        ),
                       ),
                       const SizedBox(height: 32),
 

@@ -3,6 +3,7 @@ import 'package:yogo_vital_app/core/models/sabor.dart';
 import 'package:yogo_vital_app/data/repositories/favoritos_repository.dart';
 import 'package:yogo_vital_app/presentation/widgets/favorite_button.dart';
 import 'package:yogo_vital_app/presentation/widgets/imagen_producto.dart';
+import 'package:yogo_vital_app/core/services/precios_service.dart';
 
 /// Sabores que el cliente marcó con el corazón.
 class FavoritosPage extends StatefulWidget {
@@ -20,6 +21,22 @@ class _FavoritosPageState extends State<FavoritosPage> {
   void initState() {
     super.initState();
     _future = _repo.getFavoritosConDetalle();
+    // Sin esto las tarjetas de favoritos se quedarían sin precio si el
+    // usuario entra aquí antes de pasar por Inicio o Yogures.
+    PreciosService.precargar().then((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+
+  /// Precio con el que se anuncia un sabor en una tarjeta.
+  ///
+  /// En la tarjeta todavía no hay tamaño elegido, así que se muestra el más
+  /// barato y se avisa con "Desde". Antes salía `precio_base`, que desde la
+  /// migración 0051 no se cobra.
+  String _precioDesde(Sabor s) {
+    final desde = PreciosService.desde(s.recargo);
+    return desde == null ? '' : 'Desde \$${desde.toStringAsFixed(0)}';
   }
 
   Future<void> _recargar() async {
@@ -152,7 +169,9 @@ class _FavoritosPageState extends State<FavoritosPage> {
                                             fontSize: 15)),
                                     const SizedBox(height: 4),
                                     Text(
-                                      '\$${s.precioBase.toStringAsFixed(0)}',
+                                      _precioDesde(s),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
                                           color: Color(0xFF2E7D32),
                                           fontWeight: FontWeight.w600),

@@ -584,10 +584,12 @@ class _PersonalizadoContentState extends State<_PersonalizadoContent> {
                       style: const TextStyle(
                           fontSize: 13, color: Colors.black87),
                     ),
-                    if (s.precioBase > 0) ...[
+                    if (s.recargo > 0) ...[
                       const SizedBox(height: 6),
                       Text(
-                        'Precio base: ${_cop.format(s.precioBase)}',
+                        // Es un recargo, no el precio: el precio lo pone el
+                        // tamaño. El signo "+" lo deja claro de un vistazo.
+                        'Recargo: + ${_cop.format(s.recargo)}',
                         style: const TextStyle(
                           fontSize: 12,
                           color: Color(0xFF2E7D32),

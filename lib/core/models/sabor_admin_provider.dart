@@ -50,7 +50,7 @@ class SaborAdminProvider extends ChangeNotifier {
   Future<bool> agregarSabor({
     required String nombre,
     required String descripcion,
-    required double precioBase,
+    required double recargo,
     String? imagenUrl,
   }) async {
     _setFormState(SaborFormState.saving);
@@ -58,7 +58,7 @@ class SaborAdminProvider extends ChangeNotifier {
       final nuevo = await repository.createSabor(
         nombre: nombre,
         descripcion: descripcion,
-        precioBase: precioBase,
+        recargo: recargo,
         imagenUrl: imagenUrl,
       );
       _sabores = [nuevo, ..._sabores];
@@ -80,7 +80,7 @@ class SaborAdminProvider extends ChangeNotifier {
     required String id,
     required String nombre,
     required String descripcion,
-    required double precioBase,
+    required double recargo,
     String? imagenUrl,
   }) async {
     _setFormState(SaborFormState.saving);
@@ -89,7 +89,7 @@ class SaborAdminProvider extends ChangeNotifier {
         id: id,
         nombre: nombre,
         descripcion: descripcion,
-        precioBase: precioBase,
+        recargo: recargo,
         imagenUrl: imagenUrl,
       );
       _sabores = _sabores.map((s) => s.id == id ? actualizado : s).toList();

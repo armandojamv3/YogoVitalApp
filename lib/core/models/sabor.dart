@@ -3,7 +3,17 @@ class Sabor {
   final String id;
   final String nombre;
   final String descripcion;
-  final double precioBase;
+  /// OBSOLETO desde la migración 0051. Ya no es lo que se cobra: el precio
+  /// de un típico es el del tamaño más [recargo]. Se conserva porque hay
+  /// pedidos antiguos calculados con él.
+  final double? precioBase;
+
+  /// Lo que suma este sabor al precio del tamaño.
+  ///
+  /// 0 significa sabor estándar, sin sobrecosto. Un chontaduro sale más
+  /// caro que una piña porque la fruta cuesta más, y eso es lo que recoge
+  /// este número.
+  final double recargo;
   final String? imagenUrl;
   /// Promedio de estrellas, o **null si nadie lo ha calificado todavía**.
   ///
@@ -18,7 +28,8 @@ class Sabor {
     required this.id,
     required this.nombre,
     required this.descripcion,
-    required this.precioBase,
+    this.precioBase,
+    this.recargo = 0,
     this.imagenUrl,
     this.calificacionPromedio,
     required this.activo,
@@ -30,7 +41,10 @@ class Sabor {
       id: json['id']?.toString() ?? '',
       nombre: json['nombre'] as String? ?? '',
       descripcion: json['descripcion'] as String? ?? '',
-      precioBase: _parseDouble(json['precio_base']),
+      precioBase: json['precio_base'] == null
+          ? null
+          : _parseDouble(json['precio_base']),
+      recargo: _parseDouble(json['recargo']),
       imagenUrl: json['imagen_url'] as String?,
       calificacionPromedio: _parseDouble(json['calificacion_promedio']) > 0
           ? _parseDouble(json['calificacion_promedio'])
@@ -44,7 +58,8 @@ class Sabor {
     'id': id,
     'nombre': nombre,
     'descripcion': descripcion,
-    'precio_base': precioBase,
+    if (precioBase != null) 'precio_base': precioBase,
+    'recargo': recargo,
     if (imagenUrl != null) 'imagen_url': imagenUrl,
     if (calificacionPromedio != null)
       'calificacion_promedio': calificacionPromedio,
@@ -56,7 +71,8 @@ class Sabor {
   Map<String, dynamic> toInsertJson() => {
     'nombre': nombre,
     'descripcion': descripcion,
-    'precio_base': precioBase,
+    // `precio_base` ya no se escribe: es la columna obsoleta.
+    'recargo': recargo,
     if (imagenUrl != null) 'imagen_url': imagenUrl,
     'activo': true,
   };
@@ -65,7 +81,7 @@ class Sabor {
   Map<String, dynamic> toUpdateJson() => {
     'nombre': nombre,
     'descripcion': descripcion,
-    'precio_base': precioBase,
+    'recargo': recargo,
     if (imagenUrl != null) 'imagen_url': imagenUrl,
   };
 
@@ -73,6 +89,7 @@ class Sabor {
     String? nombre,
     String? descripcion,
     double? precioBase,
+    double? recargo,
     String? imagenUrl,
     double? calificacionPromedio,
     bool? activo,
@@ -82,6 +99,7 @@ class Sabor {
       nombre: nombre ?? this.nombre,
       descripcion: descripcion ?? this.descripcion,
       precioBase: precioBase ?? this.precioBase,
+      recargo: recargo ?? this.recargo,
       imagenUrl: imagenUrl ?? this.imagenUrl,
       calificacionPromedio: calificacionPromedio ?? this.calificacionPromedio,
       activo: activo ?? this.activo,

@@ -60,7 +60,7 @@ class SaboresAdminRepository {
   Future<Sabor> createSabor({
     required String nombre,
     required String descripcion,
-    required double precioBase,
+    required double recargo,
     String? imagenUrl,
   }) async {
     try {
@@ -69,7 +69,7 @@ class SaboresAdminRepository {
           .insert({
             'nombre': nombre.trim(),
             'descripcion': descripcion.trim(),
-            'precio_base': precioBase,
+            'recargo': recargo,
             'activo': true,
             if (imagenUrl != null) 'imagen_url': imagenUrl,
           })
@@ -87,7 +87,7 @@ class SaboresAdminRepository {
     required String id,
     required String nombre,
     required String descripcion,
-    required double precioBase,
+    required double recargo,
     String? imagenUrl,
   }) async {
     try {
@@ -96,7 +96,7 @@ class SaboresAdminRepository {
           .update({
             'nombre': nombre.trim(),
             'descripcion': descripcion.trim(),
-            'precio_base': precioBase,
+            'recargo': recargo,
             if (imagenUrl != null) 'imagen_url': imagenUrl,
           })
           .eq('id', id)

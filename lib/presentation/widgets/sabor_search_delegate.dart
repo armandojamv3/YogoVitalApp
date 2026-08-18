@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:yogo_vital_app/core/models/sabor.dart';
 import 'package:yogo_vital_app/data/repositories/catalogo_repository.dart';
 import 'package:yogo_vital_app/presentation/widgets/imagen_producto.dart';
+import 'package:yogo_vital_app/core/services/precios_service.dart';
 
 /// Buscador de sabores reutilizable (Home, Yogures) vía Icons.search.
 /// Usa la búsqueda nativa de Flutter (showSearch) sobre `sabores.nombre`.
@@ -91,7 +92,9 @@ class SaborSearchDelegate extends SearchDelegate<void> {
                 overflow: TextOverflow.ellipsis,
               ),
               trailing: Text(
-                '\$${s.precioBase.toStringAsFixed(0)}',
+                _precioDesde(s),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                     fontWeight: FontWeight.bold, color: Colors.green),
               ),
@@ -103,6 +106,7 @@ class SaborSearchDelegate extends SearchDelegate<void> {
                   'description': s.descripcion,
                   'image': s.imagenUrl ?? '',
                   'precio': s.precioBase,
+                  'recargo': s.recargo,
                   'rating': s.calificacionPromedio,
                 });
               },
@@ -125,4 +129,15 @@ class SaborSearchDelegate extends SearchDelegate<void> {
     });
     return completer.future;
   }
+
+  /// Precio con el que se anuncia un sabor en una tarjeta.
+  ///
+  /// En la tarjeta todavía no hay tamaño elegido, así que se muestra el más
+  /// barato y se avisa con "Desde". Antes salía `precio_base`, que desde la
+  /// migración 0051 no se cobra.
+  String _precioDesde(Sabor s) {
+    final desde = PreciosService.desde(s.recargo);
+    return desde == null ? '' : 'Desde \$${desde.toStringAsFixed(0)}';
+  }
+
 }

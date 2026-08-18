@@ -8,6 +8,7 @@ import 'package:yogo_vital_app/presentation/pages/yogurt/predisenhado_detail_pag
 import 'package:yogo_vital_app/presentation/widgets/custom_bottom_nav_bar.dart';
 import 'package:yogo_vital_app/presentation/widgets/imagen_producto.dart';
 import 'package:yogo_vital_app/presentation/widgets/sabor_search_delegate.dart';
+import 'package:yogo_vital_app/core/services/precios_service.dart';
 
 class YogurtPage extends StatefulWidget {
   const YogurtPage({super.key});
@@ -46,10 +47,26 @@ class _YogurtPageState extends State<YogurtPage>
     super.dispose();
   }
 
+
+  /// Precio con el que se anuncia un sabor en una tarjeta.
+  ///
+  /// En la tarjeta todavía no hay tamaño elegido, así que se muestra el más
+  /// barato y se avisa con "Desde". Antes salía `precio_base`, que desde la
+  /// migración 0051 no se cobra.
+  String _precioDesde(Sabor s) {
+    final desde = PreciosService.desde(s.recargo);
+    return desde == null ? '' : 'Desde \$${desde.toStringAsFixed(0)}';
+  }
+
   // HU_08: sabores activos para tab Típicos
   Future<void> _loadTypicals() async {
     try {
-      final data = await _repo.getCatalogSabores();
+      // El precio de partida de las tarjetas sale del tamaño más barato.
+      final resultados = await Future.wait([
+        _repo.getCatalogSabores(),
+        PreciosService.precargar(),
+      ]);
+      final data = resultados[0] as List<Sabor>;
       if (!mounted) return;
       setState(() {
         _sabores = data;
@@ -95,8 +112,17 @@ class _YogurtPageState extends State<YogurtPage>
         child: Column(
           children: [
             // Header
+            // Barra superior: logo a la izquierda, lupa a la derecha.
+            //
+            // Antes el logo iba centrado dentro de un Expanded, lo que
+            // obligaba a reservar la altura completa de la imagen en medio
+            // de la fila. Puesto en la esquina ocupa lo mismo de ancho que
+            // el botón de la derecha y la fila puede ser más baja: el
+            // relleno vertical baja de 12 a 6 y el logo de 36 a 30 px.
+            //
+            // Se gana alto para el catálogo sin perder la marca.
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               color: const Color(0xFF5B9EF5),
               child: Row(
                 children: [
@@ -106,17 +132,16 @@ class _YogurtPageState extends State<YogurtPage>
                   if (Navigator.canPop(context))
                     IconButton(
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                       onPressed: () => Navigator.pop(context),
-                    )
-                  else
-                    const SizedBox(width: 48),
-                  Expanded(
-                    child: Center(
-                      child: Image.asset('assets/images/logo.png', height: 36),
                     ),
-                  ),
+                  if (Navigator.canPop(context)) const SizedBox(width: 12),
+                  Image.asset('assets/images/logo.png', height: 30),
+                  const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.search, color: Colors.white),
+                    tooltip: 'Buscar sabores',
                     onPressed: () => showSearch(
                         context: context, delegate: SaborSearchDelegate()),
                   ),
@@ -204,6 +229,7 @@ class _YogurtPageState extends State<YogurtPage>
         'description': s.descripcion,
         'image': s.imagenUrl ?? '',
         'precio': s.precioBase,
+        'recargo': s.recargo,
         'rating': s.calificacionPromedio,
       }),
       child: Container(
@@ -242,7 +268,9 @@ class _YogurtPageState extends State<YogurtPage>
                       style: const TextStyle(
                           fontWeight: FontWeight.bold, fontSize: 13)),
                   const SizedBox(height: 3),
-                  Text(_cop.format(s.precioBase),
+                  Text(_precioDesde(s),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                           color: Color(0xFF2E7D32),
                           fontWeight: FontWeight.w600,

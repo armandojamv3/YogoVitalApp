@@ -38,7 +38,13 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   /// El precio lo manda el tamaño, igual que en el personalizado. El
   /// `precio_base` del sabor queda como referencia del catálogo, pero no es
   /// lo que se cobra.
-  double get _precio => _tamano?.precioBase ?? 0;
+  /// Recargo del sabor, leído de los argumentos de la ruta.
+  ///
+  /// Viaja en el mapa igual que el título o la imagen, en vez de volver a
+  /// consultar el sabor: la pantalla anterior ya lo tenía cargado.
+  double _recargo = 0;
+
+  double get _precio => (_tamano?.precioBase ?? 0) + _recargo;
 
   @override
   void initState() {
@@ -110,6 +116,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   Widget build(BuildContext context) {
     final args =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    _recargo = (args?['recargo'] as num?)?.toDouble() ?? 0;
     final title = args?['title']?.toString() ?? 'Producto';
     final description = args?['description']?.toString() ?? '';
     final image = args?['image']?.toString() ?? '';
@@ -307,7 +314,15 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               ),
             ),
             Text(
-              _cop.format(t.precioBase),
+              // El precio FINAL con ese tamaño, recargo del sabor incluido,
+              // no el del tamaño suelto.
+              //
+              // Mostrar el del tamaño a secas dejaba al cliente con dos
+              // números que no cuadraban: la tarjeta decía $5.000 y el
+              // botón de abajo $6.500, sin nada que explicara la
+              // diferencia. Es el mismo criterio que ya usan los
+              // prediseñados.
+              _cop.format(t.precioBase + _recargo),
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
