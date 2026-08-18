@@ -66,5 +66,12 @@
 			</array>
 		</dict>
 	</array>
+	<!-- Permite que iOS despierte la app para procesar una notificacion
+	     cuando esta en segundo plano. Sin esta clave las push llegan solo
+	     con la app abierta. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 </dict>
 </plist>

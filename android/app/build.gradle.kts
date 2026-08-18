@@ -8,7 +8,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.yogo_vital_app"
+    namespace = "com.yogovital.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -28,8 +28,11 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.yogo_vital_app"
+        // Identificador definitivo de la app. Una vez publicada en Google
+        // Play NO se puede cambiar: Play lo usa como identidad, así que
+        // cambiarlo equivale a publicar una app distinta, sin descargas ni
+        // reseñas. Debe coincidir con el paquete registrado en Firebase.
+        applicationId = "com.yogovital.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

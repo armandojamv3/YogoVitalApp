@@ -1,4 +1,4 @@
-package com.example.yogo_vital_app
+package com.yogovital.app
 
 import io.flutter.embedding.android.FlutterActivity
 
