@@ -373,8 +373,20 @@ class MyApp extends StatelessWidget {
             return PageRouteBuilder(
               settings: settings,
               pageBuilder: (_, __, ___) => pestana(),
-              transitionDuration: Duration.zero,
-              reverseTransitionDuration: Duration.zero,
+              // Un fundido corto, igual en Android y en iPhone.
+              //
+              // Sin animación el salto se siente brusco; con la animación de
+              // la plataforma parece que entras a un detalle. El fundido no
+              // dice "vas hacia dentro" ni "vas hacia atrás", solo "cambió
+              // el contenido", que es justo lo que hace una pestaña. Y al
+              // definirlo aquí se ve idéntico en los dos sistemas, en vez de
+              // depender de lo que traiga cada uno.
+              transitionDuration: const Duration(milliseconds: 150),
+              reverseTransitionDuration: const Duration(milliseconds: 150),
+              transitionsBuilder: (_, animacion, __, hijo) => FadeTransition(
+                opacity: animacion,
+                child: hijo,
+              ),
             );
           }
 
