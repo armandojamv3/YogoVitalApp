@@ -6,9 +6,10 @@
 #                     sale como artefacto se sube a Appetize.io para abrir la
 #                     app en un iPhone simulado desde el navegador.
 #
-#   ios-sin-firma     compila la versión release para iPhone real, pero sin
-#                     firmar. No se puede instalar en un teléfono, sirve como
-#                     prueba de que el proyecto compila para dispositivos iOS.
+#   ios-sin-firma     compila la versión release para iPhone real y la empaqueta
+#                     como .ipa sin firmar. Ese .ipa se firma después desde
+#                     Windows con Sideloadly y el Apple ID propio, para
+#                     instalarlo en un iPhone.
 #
 # Los builds se lanzan a mano desde la web de Codemagic eligiendo la rama
 # (desarrollo). No hay disparadores automáticos para no gastar los minutos
@@ -43,7 +44,7 @@ workflows:
       - flutter_drive.log
 
   ios-sin-firma:
-    name: iOS - Release sin firma
+    name: iOS - IPA sin firmar (Sideloadly)
     instance_type: mac_mini_m2
     max_build_duration: 60
     environment:
@@ -61,10 +62,12 @@ workflows:
       - name: Compilar release para iPhone (sin firmar)
         script: |
           flutter build ios --release --no-codesign
-      - name: Empaquetar Runner.app
+      - name: Empaquetar como .ipa sin firmar
         script: |
           cd build/ios/iphoneos
-          zip -r "$CM_BUILD_DIR/YogoVital-ios-release-sin-firma.zip" Runner.app
+          mkdir -p Payload
+          cp -r Runner.app Payload/
+          zip -r "$CM_BUILD_DIR/YogoVital-sin-firmar.ipa" Payload
     artifacts:
-      - YogoVital-ios-release-sin-firma.zip
+      - YogoVital-sin-firmar.ipa
       - flutter_drive.log
