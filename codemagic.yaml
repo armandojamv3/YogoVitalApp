@@ -1,0 +1,70 @@
+# Compilación de Yogo Vital para iOS en Codemagic (Mac mini M2).
+#
+# Hay dos flujos. Ninguno necesita cuenta de Apple Developer:
+#
+#   ios-simulador     genera la app para el simulador de iPhone. El .zip que
+#                     sale como artefacto se sube a Appetize.io para abrir la
+#                     app en un iPhone simulado desde el navegador.
+#
+#   ios-sin-firma     compila la versión release para iPhone real, pero sin
+#                     firmar. No se puede instalar en un teléfono, sirve como
+#                     prueba de que el proyecto compila para dispositivos iOS.
+#
+# Los builds se lanzan a mano desde la web de Codemagic eligiendo la rama
+# (desarrollo). No hay disparadores automáticos para no gastar los minutos
+# gratis en cada push.
+
+workflows:
+  ios-simulador:
+    name: iOS - Simulador (Appetize)
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Versiones de las herramientas
+        script: |
+          flutter --version
+          xcodebuild -version
+      - name: Dependencias de Flutter
+        script: |
+          flutter pub get
+      - name: Compilar para el simulador de iOS
+        script: |
+          flutter build ios --simulator --debug
+      - name: Empaquetar Runner.app para Appetize
+        script: |
+          cd build/ios/iphonesimulator
+          zip -r "$CM_BUILD_DIR/YogoVital-ios-simulador.zip" Runner.app
+    artifacts:
+      - YogoVital-ios-simulador.zip
+      - flutter_drive.log
+
+  ios-sin-firma:
+    name: iOS - Release sin firma
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Versiones de las herramientas
+        script: |
+          flutter --version
+          xcodebuild -version
+      - name: Dependencias de Flutter
+        script: |
+          flutter pub get
+      - name: Compilar release para iPhone (sin firmar)
+        script: |
+          flutter build ios --release --no-codesign
+      - name: Empaquetar Runner.app
+        script: |
+          cd build/ios/iphoneos
+          zip -r "$CM_BUILD_DIR/YogoVital-ios-release-sin-firma.zip" Runner.app
+    artifacts:
+      - YogoVital-ios-release-sin-firma.zip
+      - flutter_drive.log
